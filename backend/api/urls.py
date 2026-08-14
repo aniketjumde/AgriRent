@@ -1,0 +1,52 @@
+from django.urls import path
+from .views import (
+    register_view, verify_otp_view, login_view, forgot_password_view, reset_password_view, get_me_view,
+    EquipmentListCreateView, EquipmentDetailView, verify_equipment_view, create_review_view,
+    BookingListCreateView, update_booking_status_view, booking_chat_view, notification_list_view,
+    SupportTicketListCreateView, update_ticket_status_view,
+    ai_recommend_view, ai_predict_price_view, ai_voice_booking_view, ai_assistant_chat_view,
+    farmer_dashboard_analytics, owner_dashboard_analytics, admin_dashboard_analytics,
+    weather_forecast_view, govt_schemes_view, booking_damage_detection_view
+)
+
+urlpatterns = [
+    # Auth Routes
+    path('auth/register/', register_view, name='register'),
+    path('auth/verify-otp/', verify_otp_view, name='verify-otp'),
+    path('auth/login/', login_view, name='login'),
+    path('auth/forgot-password/', forgot_password_view, name='forgot-password'),
+    path('auth/reset-password/', reset_password_view, name='reset-password'),
+    path('auth/me/', get_me_view, name='auth-me'),
+
+    # Listings & Reviews
+    path('equipment/', EquipmentListCreateView.as_view(), name='equipment-list-create'),
+    path('equipment/<int:pk>/', EquipmentDetailView.as_view(), name='equipment-detail'),
+    path('equipment/<int:pk>/verify/', verify_equipment_view, name='equipment-verify'),
+    path('equipment/<int:pk>/reviews/', create_review_view, name='equipment-reviews'),
+
+    # Bookings & Real-time Chat
+    path('bookings/', BookingListCreateView.as_view(), name='bookings-list-create'),
+    path('bookings/<int:pk>/status/', update_booking_status_view, name='booking-status-update'),
+    path('bookings/<int:pk>/messages/', booking_chat_view, name='booking-chat'),
+    path('bookings/<int:pk>/damage/', booking_damage_detection_view, name='booking-damage-detection'),
+
+    # Notifications & Support
+    path('notifications/', notification_list_view, name='notifications-list'),
+    path('support/tickets/', SupportTicketListCreateView.as_view(), name='support-tickets'),
+    path('support/tickets/<int:pk>/', update_ticket_status_view, name='support-ticket-update'),
+
+    # AI Module routes
+    path('ai/recommend/', ai_recommend_view, name='ai-recommend'),
+    path('ai/predict-price/', ai_predict_price_view, name='ai-predict-price'),
+    path('ai/voice-booking/', ai_voice_booking_view, name='ai-voice-booking'),
+    path('ai/chat/', ai_assistant_chat_view, name='ai-chat'),
+
+    # Analytics Dashboards
+    path('dashboard/farmer/', farmer_dashboard_analytics, name='dashboard-farmer'),
+    path('dashboard/owner/', owner_dashboard_analytics, name='dashboard-owner'),
+    path('dashboard/admin/', admin_dashboard_analytics, name='dashboard-admin'),
+    
+    # Weather & Government Schemes
+    path('weather/', weather_forecast_view, name='weather-forecast'),
+    path('govt-schemes/', govt_schemes_view, name='govt-schemes'),
+]
