@@ -258,3 +258,41 @@ class OperatorModuleTests(TestCase):
         self.assertTrue(len(history_res.data) >= 1)
         self.assertEqual(history_res.data[0]['razorpay_payment_id'], test_payment_id)
         self.assertEqual(history_res.data[0]['status'], 'Captured')
+
+    def test_nearby_equipment_and_cart_validation(self):
+        # 1. Test nearby equipment search with radius 50km
+        res = self.client.get('/api/equipment/nearby/?lat=11.0168&lng=76.9558&radius=50')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('results', res.data)
+        self.assertTrue(len(res.data['results']) > 0)
+        first_item = res.data['results'][0]
+        self.assertIn('distance_km', first_item)
+        self.assertIn('rental_price_per_day', first_item)
+
+        # 2. Test cart validation endpoint
+        self.client.force_authenticate(user=self.farmer)
+        now = timezone.now()
+        start = (now + timezone.timedelta(days=1)).isoformat()
+        end = (now + timezone.timedelta(days=1, hours=4)).isoformat()
+
+        cart_payload = {
+            'farmer_lat': 11.0168,
+            'farmer_lng': 76.9558,
+            'items': [{
+                'equipment_id': self.equipment.id,
+                'start_date': start,
+                'end_date': end,
+                'acreage': 3.5,
+                'farming_operation': 'Plowing',
+                'rental_type': 'hourly',
+                'duration': 4,
+                'requires_operator': True,
+                'delivery_option': 'Delivery'
+            }]
+        }
+        val_res = self.client.post('/api/cart/validate/', cart_payload, format='json')
+        self.assertEqual(val_res.status_code, status.HTTP_200_OK)
+        self.assertTrue(val_res.data['valid'])
+        self.assertGreater(val_res.data['total_cart_amount'], 0)
+        self.assertEqual(len(val_res.data['items']), 1)
+        self.assertEqual(val_res.data['items'][0]['farming_operation'], 'Plowing')

@@ -1,3 +1,4 @@
+from .nearby_views import nearby_equipment_view, validate_cart_booking_view
 from django.urls import path
 from .views import (
     register_view, verify_otp_view, login_view, forgot_password_view, reset_password_view, get_me_view,
@@ -23,6 +24,10 @@ from .operator_views import (
 )
 
 urlpatterns = [
+    # Nearby Equipment & Smart Cart APIs
+    path('equipment/nearby/', nearby_equipment_view, name='nearby-equipment'),
+    path('cart/validate/', validate_cart_booking_view, name='validate-cart-booking'),
+
     # Razorpay Payment Gateway Routes
     path('payments/razorpay/order/', razorpay_create_order_view, name='razorpay-create-order'),
     path('payments/razorpay/verify/', razorpay_verify_payment_view, name='razorpay-verify-payment'),
