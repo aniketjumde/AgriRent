@@ -43,6 +43,8 @@ export default function OperatorDashboard() {
   const [gpsSimulating, setGpsSimulating] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(null);
+  const [nearbyOperators, setNearbyOperators] = useState([]);
+  const [gpsPermissionNotice, setGpsPermissionNotice] = useState('');
 
   // Profile Edit Form State
   const [editProfile, setEditProfile] = useState({
@@ -58,11 +60,23 @@ export default function OperatorDashboard() {
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
 
   // Fetch Dashboard & Profile
+  const fetchNearbyOperators = async (lat = 11.0168, lng = 76.9558) => {
+    try {
+      const nearby = await apiFetch(`/api/operator/nearby/?latitude=${lat}&longitude=${lng}`);
+      setNearbyOperators(nearby || []);
+    } catch (e) {
+      console.warn("Could not fetch nearby operators:", e);
+    }
+  };
+
   const loadDashboardData = async () => {
     try {
       const res = await apiFetch('/api/operator/dashboard/');
       setDashboardData(res);
       setProfile(res.profile);
+      if (res.profile) {
+        fetchNearbyOperators(res.profile.current_latitude, res.profile.current_longitude);
+      }
       if (res.profile) {
         setEditProfile({
           full_name: res.profile.full_name || user?.username || '',
@@ -165,19 +179,80 @@ export default function OperatorDashboard() {
     return () => clearInterval(timer);
   }, [gpsSimulating, selectedJob?.id, selectedJob?.status]);
 
-  // Toggle availability
-  const handleToggleAvailability = async () => {
+  // Toggle Online / Offline with real GPS Geolocation permission
+  const handleToggleOnline = async () => {
     if (!profile) return;
-    try {
-      const updated = await apiFetch('/api/operator/availability/', {
-        method: 'PATCH',
-        body: JSON.stringify({ is_available: !profile.is_available })
-      });
-      setProfile(updated);
-    } catch (e) {
-      alert("Failed to update availability: " + e.message);
+    const willBeOnline = !(profile.is_online !== false && profile.is_available);
+    setGpsPermissionNotice('');
+
+    if (willBeOnline) {
+      // Operator goes Online: Request GPS Geolocation
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            try {
+              const updated = await apiFetch('/api/operator/availability/', {
+                method: 'PATCH',
+                body: JSON.stringify({
+                  is_online: true,
+                  is_available: true,
+                  current_latitude: lat,
+                  current_longitude: lng
+                })
+              });
+              setProfile(updated);
+              fetchNearbyOperators(lat, lng);
+              setGpsPermissionNotice('GPS signal acquired: Live location broadcast active.');
+              setTimeout(() => setGpsPermissionNotice(''), 4000);
+            } catch (e) {
+              alert("Failed to go online: " + e.message);
+            }
+          },
+          async (error) => {
+            console.warn("Geolocation permission error or timeout:", error.message);
+            setGpsPermissionNotice("GPS hardware unavailable, using last-verified location coordinates.");
+            try {
+              const updated = await apiFetch('/api/operator/availability/', {
+                method: 'PATCH',
+                body: JSON.stringify({ is_online: true, is_available: true })
+              });
+              setProfile(updated);
+              fetchNearbyOperators(profile.current_latitude, profile.current_longitude);
+              setTimeout(() => setGpsPermissionNotice(''), 4000);
+            } catch (e) {
+              alert("Failed to go online: " + e.message);
+            }
+          },
+          { enableHighAccuracy: true, timeout: 7000, maximumAge: 10000 }
+        );
+      } else {
+        // Fallback
+        const updated = await apiFetch('/api/operator/availability/', {
+          method: 'PATCH',
+          body: JSON.stringify({ is_online: true, is_available: true })
+        });
+        setProfile(updated);
+      }
+    } else {
+      // Operator goes Offline: stop advertising availability, stop location broadcast
+      try {
+        const updated = await apiFetch('/api/operator/availability/', {
+          method: 'PATCH',
+          body: JSON.stringify({ is_online: false, is_available: false })
+        });
+        setProfile(updated);
+        setGpsSimulating(false);
+        setGpsPermissionNotice('You are now Offline. Discovery stopped; active assignments preserved.');
+        setTimeout(() => setGpsPermissionNotice(''), 4000);
+      } catch (e) {
+        alert("Failed to go offline: " + e.message);
+      }
     }
   };
+
+  const handleToggleAvailability = handleToggleOnline;
 
   // Accept Job
   const handleAcceptJob = async (jobId) => {
@@ -360,24 +435,27 @@ export default function OperatorDashboard() {
           </div>
         </div>
 
-        {/* Real-time Availability Toggle */}
+        {/* Real-time Online / Offline Live Location Sharing Toggle */}
         <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 w-full md:w-auto justify-between">
           <div>
-            <span className="block text-[10px] uppercase font-black tracking-wider text-slate-400">Availability Status</span>
+            <span className="block text-[10px] uppercase font-black tracking-wider text-slate-400">Live Status & Location</span>
             <span className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-              <span className={`w-2.5 h-2.5 rounded-full ${profile?.is_available ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
-              {profile?.is_available ? 'Available for Field Jobs' : 'Unavailable / Offline'}
+              <span className={`w-2.5 h-2.5 rounded-full ${profile?.is_online !== false && profile?.is_available ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+              {profile?.is_online !== false && profile?.is_available ? '● Online & Discoverable' : '○ Offline'}
             </span>
+            {gpsPermissionNotice && (
+              <span className="block text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">{gpsPermissionNotice}</span>
+            )}
           </div>
           <button
-            onClick={handleToggleAvailability}
+            onClick={handleToggleOnline}
             className={`px-4 py-2 rounded-xl text-xs font-black transition-all shadow-sm ${
-              profile?.is_available
+              profile?.is_online !== false && profile?.is_available
                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                 : 'bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 text-slate-700'
             }`}
           >
-            {profile?.is_available ? 'Set Unavailable' : 'Set Available'}
+            {profile?.is_online !== false && profile?.is_available ? 'Go Offline' : 'Go Online 📍'}
           </button>
         </div>
       </div>
@@ -880,8 +958,8 @@ export default function OperatorDashboard() {
                     <div className="h-[420px] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
                       <OperatorRouteMap
                         operatorLocation={{
-                          latitude: selectedJob.current_operator_lat || 11.0250,
-                          longitude: selectedJob.current_operator_lng || 76.9620
+                          latitude: selectedJob.current_operator_lat || profile?.current_latitude || 11.0250,
+                          longitude: selectedJob.current_operator_lng || profile?.current_longitude || 76.9620
                         }}
                         pickupLocation={{
                           latitude: selectedJob.pickup_latitude,
@@ -895,7 +973,9 @@ export default function OperatorDashboard() {
                           address: selectedJob.destination_address,
                           farmer_name: selectedJob.farmer_name
                         }}
+                        nearbyOperators={nearbyOperators}
                         status={selectedJob.status}
+                        isOnline={profile?.is_online !== false && profile?.is_available}
                       />
                     </div>
 
@@ -1071,12 +1151,34 @@ export default function OperatorDashboard() {
 
                 </div>
               ) : (
-                <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
-                  <Compass className="w-12 h-12 text-slate-400 mx-auto" />
-                  <h4 className="text-base font-bold text-slate-800 dark:text-white">No Active Job Selected</h4>
-                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                    Accept an incoming request from the "Job Requests" page to start live navigation and tracking.
-                  </p>
+                <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <Navigation className="w-5 h-5 text-emerald-600" />
+                        Live Field GPS Radar & Standby Map
+                      </h4>
+                      <p className="text-xs text-slate-500">
+                        {profile?.is_online ? '● Broadcasting live coordinates to AI Dispatch Engine.' : '○ Offline — Switch Online to receive matching job requests.'}
+                      </p>
+                    </div>
+                    <span className="text-xs font-bold text-sky-600">
+                      {nearbyOperators.length} Nearby Operators Online
+                    </span>
+                  </div>
+                  <div className="h-[400px] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+                    <OperatorRouteMap
+                      operatorLocation={{
+                        latitude: profile?.current_latitude || 11.0250,
+                        longitude: profile?.current_longitude || 76.9620
+                      }}
+                      pickupLocation={null}
+                      destinationLocation={null}
+                      nearbyOperators={nearbyOperators}
+                      status="STANDBY"
+                      isOnline={profile?.is_online !== false && profile?.is_available}
+                    />
+                  </div>
                 </div>
               )}
             </div>

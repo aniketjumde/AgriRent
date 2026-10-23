@@ -12,7 +12,8 @@ from .operator_views import (
     OperatorProfileView, update_operator_availability_view, admin_operator_verifications_view,
     find_matching_operators_view, operator_dashboard_jobs_view,
     operator_accept_job_view, operator_reject_job_view,
-    update_job_status_transition_view, update_operator_location_view, get_job_tracking_data_view
+    update_job_status_transition_view, update_operator_location_view, get_job_tracking_data_view,
+    list_nearby_online_operators_view, owner_request_operator_view
 )
 
 urlpatterns = [
@@ -39,6 +40,8 @@ urlpatterns = [
     # Operator Management & Smart Jobs APIs
     path('operator/profile/', OperatorProfileView.as_view(), name='operator-profile'),
     path('operator/availability/', update_operator_availability_view, name='operator-availability'),
+    path('operator/nearby/', list_nearby_online_operators_view, name='operator-nearby-online'),
+    path('operator/request/<int:booking_id>/', owner_request_operator_view, name='operator-owner-request'),
     path('operator/dashboard/', operator_dashboard_jobs_view, name='operator-dashboard'),
     path('operator/jobs/<int:pk>/accept/', operator_accept_job_view, name='operator-accept-job'),
     path('operator/jobs/<int:pk>/reject/', operator_reject_job_view, name='operator-reject-job'),

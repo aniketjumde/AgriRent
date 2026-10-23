@@ -22,7 +22,9 @@ export default function OperatorRouteMap({
   operatorLocation, 
   pickupLocation, 
   destinationLocation, 
-  status = 'ACCEPTED' 
+  nearbyOperators = [],
+  status = 'ACCEPTED',
+  isOnline = true
 }) {
   const mapRef = useRef(null);
   const containerRef = useRef(null);
@@ -64,21 +66,45 @@ export default function OperatorRouteMap({
 
     const boundsPoints = [];
 
-    // 1. Operator Live Marker (Blue)
+    // 1. Operator Live Marker (Blue if Online, Slate if Offline)
     if (operatorLocation?.latitude && operatorLocation?.longitude) {
       const opLat = parseFloat(operatorLocation.latitude);
       const opLng = parseFloat(operatorLocation.longitude);
+      const markerColor = isOnline ? '#2563eb' : '#64748b';
       const opMarker = L.marker([opLat, opLng], {
-        icon: createCustomIcon('#2563eb', '🚜')
+        icon: createCustomIcon(markerColor, isOnline ? '🚜' : '💤')
       }).addTo(map);
       opMarker.bindPopup(`
         <div class="p-1.5 font-sans">
-          <p class="font-bold text-xs text-blue-600">Operator Live Position</p>
-          <p class="text-[10px] text-slate-500">Status: ${status}</p>
+          <p class="font-bold text-xs ${isOnline ? 'text-blue-600' : 'text-slate-500'}">
+            Your Location (${isOnline ? '● Online & Available' : '○ Offline'})
+          </p>
+          <p class="text-[10px] text-slate-500">Mission Status: ${status}</p>
+          <p class="text-[9px] text-slate-400">Lat: ${opLat.toFixed(4)}, Lng: ${opLng.toFixed(4)}</p>
         </div>
       `);
       layersRef.current.push(opMarker);
       boundsPoints.push([opLat, opLng]);
+    }
+
+    // 1b. Nearby Eligible Operators on Authorized Radar
+    if (Array.isArray(nearbyOperators)) {
+      nearbyOperators.forEach(nearby => {
+        if (!nearby.latitude || !nearby.longitude) return;
+        const nLat = parseFloat(nearby.latitude);
+        const nLng = parseFloat(nearby.longitude);
+        const nMarker = L.marker([nLat, nLng], {
+          icon: createCustomIcon('#0ea5e9', '👨‍🌾')
+        }).addTo(map);
+        nMarker.bindPopup(`
+          <div class="p-1.5 font-sans">
+            <p class="font-bold text-xs text-sky-600">${nearby.name || 'Nearby Operator'}</p>
+            <p class="text-[10px] text-slate-600">★ ${nearby.rating || 4.9} Trust • Rate: ₹${nearby.hourly_rate || 250}/hr</p>
+            <p class="text-[10px] text-slate-500">${nearby.distance_km || 5} km away • ${nearby.work_status || 'Available'}</p>
+          </div>
+        `);
+        layersRef.current.push(nMarker);
+      });
     }
 
     // 2. Machine Pickup Marker (Amber)
@@ -152,7 +178,7 @@ export default function OperatorRouteMap({
     } else if (boundsPoints.length === 1) {
       map.setView(boundsPoints[0], 13);
     }
-  }, [operatorLocation, pickupLocation, destinationLocation, status]);
+  }, [operatorLocation, pickupLocation, destinationLocation, nearbyOperators, status, isOnline]);
 
   return (
     <div className="relative w-full h-full min-h-[380px] rounded-2xl overflow-hidden shadow-md border border-slate-200 dark:border-slate-800">
@@ -161,8 +187,12 @@ export default function OperatorRouteMap({
       {/* Legend Badge */}
       <div className="absolute bottom-3 left-3 z-[400] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-xl shadow-lg border border-slate-200/80 dark:border-slate-800 text-[11px] font-bold flex flex-wrap items-center gap-3.5 text-slate-700 dark:text-slate-300">
         <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-blue-600 inline-block"></span>
-          <span>Operator</span>
+          <span className={`w-3 h-3 rounded-full inline-block ${isOnline ? 'bg-blue-600' : 'bg-slate-400'}`}></span>
+          <span>You ({isOnline ? 'Online' : 'Offline'})</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-full bg-sky-500 inline-block"></span>
+          <span>Nearby Operators</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>

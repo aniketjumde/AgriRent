@@ -40,6 +40,8 @@ class OperatorProfile(models.Model):
     current_longitude = models.DecimalField(max_digits=9, decimal_places=6, default=76.9558)
     working_hours = models.CharField(max_length=100, default='06:00 AM - 08:00 PM')
     is_available = models.BooleanField(default=True)
+    is_online = models.BooleanField(default=True) # Online / Offline live location broadcasting
+    last_seen_at = models.DateTimeField(auto_now=True)
     current_work_status = models.CharField(max_length=50, default='Available') # Available, On Job, Offline
     verification_status = models.CharField(max_length=20, choices=VERIFICATION_CHOICES, default='Pending')
     verification_notes = models.TextField(blank=True, default='')
@@ -181,6 +183,7 @@ class OperatorJobAssignment(models.Model):
     eta_timestamp = models.DateTimeField(null=True, blank=True)
     
     # Lifecycle Timestamps
+    expires_at = models.DateTimeField(null=True, blank=True)
     requested_at = models.DateTimeField(auto_now_add=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
     pickup_arrival_at = models.DateTimeField(null=True, blank=True)
