@@ -1742,6 +1742,131 @@ const mockApiRouter = async (endpoint, options = {}) => {
     throw new Error("Operator profile not found.");
   }
 
+
+  // Ensure payments mock array
+  if (!db.payment_transactions) db.payment_transactions = [];
+
+  // 23. Razorpay Create Order Mock
+  if (cleanEndpoint === '/api/payments/razorpay/order/' && method === 'POST') {
+    const booking = db.bookings.find(b => b.id === parseInt(body.booking_id));
+    if (!booking) throw new Error("Booking not found.");
+
+    const orderId = `order_test_${Math.random().toString(36).substring(2, 12)}`;
+    booking.razorpay_order_id = orderId;
+
+    const tx = {
+      id: db.payment_transactions.length + 1,
+      booking: booking.id,
+      farmer: currentUser?.id || 1,
+      farmer_name: currentUser?.username || 'farmer',
+      equipment_title: booking.equipment_details?.title,
+      razorpay_order_id: orderId,
+      amount: parseFloat(booking.total_cost),
+      currency: 'INR',
+      status: 'Pending',
+      created_at: new Date().toISOString()
+    };
+    db.payment_transactions.push(tx);
+    saveMockDB(db);
+
+    return {
+      order_id: orderId,
+      key_id: "rzp_test_AgriRentDemoKey123",
+      amount: Math.round(parseFloat(booking.total_cost) * 100),
+      amount_in_rupees: parseFloat(booking.total_cost),
+      currency: "INR",
+      receipt: `rcpt_mock_${booking.id}`,
+      booking_id: booking.id,
+      equipment_title: booking.equipment_details?.title,
+      farmer: {
+        name: currentUser?.username || "farmer",
+        email: currentUser?.email || "farmer@agrirent.com",
+        contact: currentUser?.phone_number || "+919876543211"
+      }
+    };
+  }
+
+  // 24. Razorpay Verify Payment Mock
+  if (cleanEndpoint === '/api/payments/razorpay/verify/' && method === 'POST') {
+    const booking = db.bookings.find(b => b.id === parseInt(body.booking_id) || b.razorpay_order_id === body.razorpay_order_id);
+    if (!booking) throw new Error("Booking not found.");
+
+    booking.payment_status = 'Captured';
+    booking.razorpay_payment_id = body.razorpay_payment_id || `pay_test_${Math.random().toString(36).substring(2, 12)}`;
+    booking.paid_at = new Date().toISOString();
+    booking.escrow_status = 'Held';
+
+    let tx = db.payment_transactions.find(t => t.razorpay_order_id === body.razorpay_order_id);
+    if (tx) {
+      tx.status = 'Captured';
+      tx.razorpay_payment_id = booking.razorpay_payment_id;
+      tx.updated_at = new Date().toISOString();
+    } else {
+      tx = {
+        id: db.payment_transactions.length + 1,
+        booking: booking.id,
+        farmer: currentUser?.id || 1,
+        farmer_name: currentUser?.username || 'farmer',
+        equipment_title: booking.equipment_details?.title,
+        razorpay_order_id: body.razorpay_order_id,
+        razorpay_payment_id: booking.razorpay_payment_id,
+        amount: parseFloat(booking.total_cost),
+        currency: 'INR',
+        status: 'Captured',
+        created_at: new Date().toISOString()
+      };
+      db.payment_transactions.push(tx);
+    }
+
+    db.notifications.push({
+      id: db.notifications.length + 1,
+      user: currentUser?.id || 1,
+      content: `Payment of ₹${booking.total_cost} verified for Booking #${booking.id}. Razorpay ID: ${booking.razorpay_payment_id}.`,
+      is_read: false,
+      created_at: new Date().toISOString()
+    });
+
+    saveMockDB(db);
+    return {
+      status: "success",
+      message: "Payment verified and recorded successfully.",
+      booking,
+      transaction: tx
+    };
+  }
+
+  // 25. Farmer Payment History Mock
+  if (cleanEndpoint === '/api/payments/history/' && method === 'GET') {
+    return (db.payment_transactions || []).filter(t => !currentUser || t.farmer === currentUser.id);
+  }
+
+  // 26. Razorpay Refund Request Mock
+  if (cleanEndpoint.startsWith('/api/payments/refund/') && method === 'POST') {
+    const bId = parseInt(cleanEndpoint.split('/')[4]);
+    const booking = db.bookings.find(b => b.id === bId);
+    if (!booking) throw new Error("Booking not found.");
+
+    booking.payment_status = 'Refunded';
+    booking.escrow_status = 'Refunded';
+    booking.status = 'Rejected';
+
+    const refundId = `rfnd_mock_${Math.random().toString(36).substring(2, 12)}`;
+    const tx = db.payment_transactions.find(t => t.booking === bId);
+    if (tx) {
+      tx.status = 'Refunded';
+      tx.refund_id = refundId;
+      tx.refund_amount = parseFloat(booking.total_cost);
+    }
+
+    saveMockDB(db);
+    return {
+      status: "success",
+      message: "Refund processed successfully.",
+      refund_id: refundId,
+      refund_amount: parseFloat(booking.total_cost)
+    };
+  }
+
   throw new Error(`Endpoint mock handler not found for: ${method} ${endpoint}`);
 };
 

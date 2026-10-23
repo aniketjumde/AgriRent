@@ -218,3 +218,43 @@ class OperatorModuleTests(TestCase):
         req_res = self.client.post(f'/api/operator/request/{b_id}/')
         self.assertEqual(req_res.status_code, status.HTTP_201_CREATED)
         self.assertEqual(req_res.data['status'], 'REQUESTED')
+
+    def test_razorpay_order_creation_and_verification(self):
+        # 1. Create a confirmed booking
+        self.client.force_authenticate(user=self.farmer)
+        now = timezone.now()
+        b_res = self.client.post('/api/bookings/', {
+            'equipment': self.equipment.id,
+            'start_date': (now + timezone.timedelta(days=1)).isoformat(),
+            'end_date': (now + timezone.timedelta(days=2)).isoformat(),
+            'delivery_option': 'Pickup'
+        }, format='json')
+        self.assertEqual(b_res.status_code, status.HTTP_201_CREATED)
+        booking_id = b_res.data['id']
+
+        # 2. Initiate Razorpay Order creation
+        order_res = self.client.post('/api/payments/razorpay/order/', {
+            'booking_id': booking_id
+        }, format='json')
+        self.assertEqual(order_res.status_code, status.HTTP_200_OK)
+        order_id = order_res.data['order_id']
+        self.assertTrue(order_id.startswith('order_'))
+        self.assertEqual(order_res.data['currency'], 'INR')
+
+        # 3. Simulate payment completion and verification callback
+        test_payment_id = "pay_test_9876543210"
+        verify_res = self.client.post('/api/payments/razorpay/verify/', {
+            'booking_id': booking_id,
+            'razorpay_order_id': order_id,
+            'razorpay_payment_id': test_payment_id
+        }, format='json')
+        self.assertEqual(verify_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(verify_res.data['status'], 'success')
+        self.assertEqual(verify_res.data['booking']['payment_status'], 'Captured')
+
+        # 4. Query Payment History
+        history_res = self.client.get('/api/payments/history/')
+        self.assertEqual(history_res.status_code, status.HTTP_200_OK)
+        self.assertTrue(len(history_res.data) >= 1)
+        self.assertEqual(history_res.data[0]['razorpay_payment_id'], test_payment_id)
+        self.assertEqual(history_res.data[0]['status'], 'Captured')

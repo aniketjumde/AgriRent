@@ -117,6 +117,10 @@ class Booking(models.Model):
     
     # Advanced features fields
     escrow_status = models.CharField(max_length=30, default='N/A') # N/A, Held, Released, Refunded
+    payment_status = models.CharField(max_length=20, default='Pending') # Pending, Authorized, Captured, Failed, Refunded
+    razorpay_order_id = models.CharField(max_length=100, blank=True, null=True)
+    razorpay_payment_id = models.CharField(max_length=100, blank=True, null=True)
+    paid_at = models.DateTimeField(blank=True, null=True)
     micro_rental_shared = models.BooleanField(default=False)
     insurance_opt_in = models.BooleanField(default=False)
     insurance_claim_status = models.CharField(max_length=30, default='N/A') # N/A, Submitted, Under Review, Paid, Denied
@@ -295,3 +299,39 @@ class Recommendation(models.Model):
 
     def __str__(self):
         return f"Recommendation: {self.crop_type} -> {self.recommended_equipment}"
+
+
+class PaymentTransaction(models.Model):
+    STATUS_CHOICES = (
+        ('Pending', 'Pending'),
+        ('Authorized', 'Authorized'),
+        ('Captured', 'Captured'),
+        ('Failed', 'Failed'),
+        ('Cancelled', 'Cancelled'),
+        ('Refunded', 'Refunded'),
+    )
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='payment_transactions')
+    farmer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='farmer_payments')
+    razorpay_order_id = models.CharField(max_length=100, db_index=True)
+    razorpay_payment_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    razorpay_signature = models.CharField(max_length=255, blank=True, null=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2) # In INR
+    currency = models.CharField(max_length=10, default='INR')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    rental_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    operator_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    insurance_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    refund_id = models.CharField(max_length=100, blank=True, null=True)
+    refund_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    refund_reason = models.TextField(blank=True, null=True)
+    receipt_number = models.CharField(max_length=100, blank=True, null=True)
+    error_code = models.CharField(max_length=100, blank=True, null=True)
+    error_description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Payment #{self.id}: Booking #{self.booking_id} - ₹{self.amount} ({self.status})"

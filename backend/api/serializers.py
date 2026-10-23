@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     User, Equipment, Booking, Review, Message, Notification, SupportTicket,
-    PricePrediction, Recommendation, OperatorProfile, OperatorJobAssignment, JobStatusHistory
+    PricePrediction, Recommendation, OperatorProfile, OperatorJobAssignment, JobStatusHistory, PaymentTransaction
 )
 
 class OperatorProfileSerializer(serializers.ModelSerializer):
@@ -168,7 +168,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'id', 'equipment', 'equipment_details', 'farmer', 'farmer_name',
             'farmer_reliability', 'farmer_kyc_status', 'start_date', 'end_date',
             'status', 'total_cost', 'delivery_option', 'notes', 'created_at',
-            'escrow_status', 'micro_rental_shared', 'insurance_opt_in',
+            'escrow_status', 'payment_status', 'razorpay_order_id', 'razorpay_payment_id', 'paid_at', 'micro_rental_shared', 'insurance_opt_in',
             'insurance_claim_status', 'requires_operator', 'operator_assigned',
             'operator_assigned_name', 'latest_assignment',
             'before_rental_image', 'after_rental_image',
@@ -228,3 +228,20 @@ class RecommendationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recommendation
         fields = '__all__'
+
+
+class PaymentTransactionSerializer(serializers.ModelSerializer):
+    farmer_name = serializers.CharField(source='farmer.username', read_only=True)
+    equipment_title = serializers.CharField(source='booking.equipment.title', read_only=True)
+
+    class Meta:
+        model = PaymentTransaction
+        fields = (
+            'id', 'booking', 'farmer', 'farmer_name', 'equipment_title',
+            'razorpay_order_id', 'razorpay_payment_id', 'amount', 'currency',
+            'status', 'rental_charge', 'operator_charge', 'insurance_fee',
+            'delivery_fee', 'tax_amount', 'discount_amount', 'refund_id',
+            'refund_amount', 'refund_reason', 'receipt_number', 'error_code',
+            'error_description', 'created_at', 'updated_at'
+        )
+        read_only_fields = ('farmer',)

@@ -8,6 +8,12 @@ from .views import (
     farmer_dashboard_analytics, owner_dashboard_analytics, admin_dashboard_analytics,
     weather_forecast_view, govt_schemes_view, booking_damage_detection_view
 )
+
+from .payment_views import (
+    razorpay_create_order_view, razorpay_verify_payment_view,
+    razorpay_webhook_view, farmer_payment_history_view,
+    razorpay_refund_request_view
+)
 from .operator_views import (
     OperatorProfileView, update_operator_availability_view, admin_operator_verifications_view,
     find_matching_operators_view, operator_dashboard_jobs_view,
@@ -17,6 +23,13 @@ from .operator_views import (
 )
 
 urlpatterns = [
+    # Razorpay Payment Gateway Routes
+    path('payments/razorpay/order/', razorpay_create_order_view, name='razorpay-create-order'),
+    path('payments/razorpay/verify/', razorpay_verify_payment_view, name='razorpay-verify-payment'),
+    path('payments/razorpay/webhook/', razorpay_webhook_view, name='razorpay-webhook'),
+    path('payments/history/', farmer_payment_history_view, name='farmer-payment-history'),
+    path('payments/refund/<int:booking_id>/', razorpay_refund_request_view, name='razorpay-refund'),
+
     # Auth Routes
     path('auth/register/', register_view, name='register'),
     path('auth/verify-otp/', verify_otp_view, name='verify-otp'),
