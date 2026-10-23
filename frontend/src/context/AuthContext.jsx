@@ -2,7 +2,13 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 
 const AuthContext = createContext();
 
-const BACKEND_BASE = "http://127.0.0.1:8000";
+// Dynamically resolve API URL with Vercel / environment variable support
+// When VITE_API_BASE_URL is provided, use it (stripped of trailing slash).
+// In development, default to relative '/api' proxy or localhost:8000.
+const BACKEND_BASE = (
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD ? "" : "http://127.0.0.1:8000")
+).replace(/\/$/, "");
 
 const getSafeStorageItem = (key, fallback = null) => {
   try {

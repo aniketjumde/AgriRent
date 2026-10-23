@@ -296,3 +296,30 @@ class OperatorModuleTests(TestCase):
         self.assertGreater(val_res.data['total_cart_amount'], 0)
         self.assertEqual(len(val_res.data['items']), 1)
         self.assertEqual(val_res.data['items'][0]['farming_operation'], 'Plowing')
+
+
+class SupabaseStorageAndHealthTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(username='storage_farmer', phone_number='+919876599999', role='Farmer', password='Password123')
+
+
+    def test_health_check_endpoint(self):
+        res = self.client.get('/api/health/')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['status'], 'healthy')
+        self.assertTrue(res.json()['database']['connected'])
+
+    def test_storage_upload_validation(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        self.client.force_authenticate(user=self.user)
+        # Test valid image
+        dummy_image = SimpleUploadedFile("tractor.jpg", b"\xff\xd8\xff\xe0dummyjpgbytes", content_type="image/jpeg")
+        res = self.client.post('/api/storage/upload/', {'file': dummy_image}, format='multipart')
+        self.assertIn(res.status_code, [status.HTTP_200_OK, status.HTTP_201_CREATED])
+        self.assertIn('url', res.data)
+
+        # Test rejected non-image
+        dummy_txt = SimpleUploadedFile("malicious.sh", b"echo hacked", content_type="text/plain")
+        res_bad = self.client.post('/api/storage/upload/', {'file': dummy_txt}, format='multipart')
+        self.assertEqual(res_bad.status_code, status.HTTP_400_BAD_REQUEST)
