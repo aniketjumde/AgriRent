@@ -39,10 +39,11 @@ def rank_matching_operators_for_booking(booking, max_results=5):
     pickup_lng = float(equipment.location_longitude)
     machinery_type = equipment.category
 
-    # Eligible operators: verified and active
+    # Eligible operators: verified, active, available AND online
     candidates = OperatorProfile.objects.select_related('user').filter(
         verification_status='Verified',
         is_available=True,
+        is_online=True,
         user__is_active=True
     )
 

@@ -65,26 +65,102 @@ class OperatorProfileView(APIView):
 @api_view(['PATCH', 'POST'])
 @permission_classes([permissions.IsAuthenticated])
 def update_operator_availability_view(request):
-    """Quick toggle for operator online/available status and current GPS coordinates."""
+    """
+    Online/Offline toggle and live GPS coordinate beacon.
+    When switching to Online: records live latitude/longitude, activates discovery.
+    When switching to Offline: stops advertising availability for new jobs while preserving existing active tasks.
+    """
     user = request.user
     profile, _ = OperatorProfile.objects.get_or_create(user=user)
     
+    if 'is_online' in request.data:
+        profile.is_online = bool(request.data['is_online'])
+        if profile.is_online:
+            profile.is_available = True
+            if profile.current_work_status == 'Offline':
+                profile.current_work_status = 'Available'
+        else:
+            profile.is_available = False
+            # Preserve 'On Job' status if on an active mission
+            has_active = profile.job_assignments.filter(status__in=[
+                'ACCEPTED', 'TRAVELLING_TO_PICKUP', 'ARRIVED_AT_PICKUP',
+                'MACHINE_COLLECTED', 'TRAVELLING_TO_FARM', 'ARRIVED_AT_FARM', 'IN_PROGRESS'
+            ]).exists()
+            profile.current_work_status = 'On Job' if has_active else 'Offline'
+
     if 'is_available' in request.data:
         profile.is_available = bool(request.data['is_available'])
-        profile.current_work_status = 'Available' if profile.is_available else 'Offline'
+        if not profile.is_available:
+            profile.current_work_status = 'Offline'
+        elif profile.current_work_status == 'Offline':
+            profile.current_work_status = 'Available'
         
     if 'current_work_status' in request.data:
         profile.current_work_status = request.data['current_work_status']
         
     if 'current_latitude' in request.data and 'current_longitude' in request.data:
         try:
-            profile.current_latitude = float(request.data['current_latitude'])
-            profile.current_longitude = float(request.data['current_longitude'])
+            lat = float(request.data['current_latitude'])
+            lng = float(request.data['current_longitude'])
+            # Basic validation
+            if -90 <= lat <= 90 and -180 <= lng <= 180:
+                profile.current_latitude = lat
+                profile.current_longitude = lng
         except (ValueError, TypeError):
             pass
             
     profile.save()
     return Response(OperatorProfileSerializer(profile).data)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def list_nearby_online_operators_view(request):
+    """
+    Returns authorized discovery of Online/Available verified operators in the vicinity.
+    Accessible to authorized Farmers/Owners and Operators viewing dispatch radar.
+    """
+    lat = request.query_params.get('latitude') or 11.0168
+    lng = request.query_params.get('longitude') or 76.9558
+    try:
+        lat, lng = float(lat), float(lng)
+    except (ValueError, TypeError):
+        lat, lng = 11.0168, 76.9558
+
+    machinery_type = request.query_params.get('category')
+
+    # Query online, verified operators
+    operators = OperatorProfile.objects.select_related('user').filter(
+        verification_status='Verified',
+        is_online=True,
+        user__is_active=True
+    )
+
+    results = []
+    for op in operators:
+        dist_km = haversine_distance(lat, lng, op.current_latitude, op.current_longitude)
+        if dist_km <= op.service_radius_km * 2:
+            results.append({
+                'id': op.id,
+                'user_id': op.user.id,
+                'name': op.full_name or op.user.username,
+                'phone': op.phone or op.user.phone_number,
+                'rating': op.user.reliability_score,
+                'latitude': float(op.current_latitude),
+                'longitude': float(op.current_longitude),
+                'is_online': op.is_online,
+                'is_available': op.is_available,
+                'work_status': op.current_work_status,
+                'distance_km': round(dist_km, 1),
+                'service_radius_km': op.service_radius_km,
+                'supported_machinery': op.supported_machinery,
+                'experience_years': op.experience_years,
+                'hourly_rate': float(op.hourly_compensation_rate),
+                'last_seen_at': op.last_seen_at
+            })
+
+    results.sort(key=lambda x: x['distance_km'])
+    return Response(results)
 
 
 @api_view(['GET', 'POST'])
@@ -156,6 +232,7 @@ def dispatch_booking_to_matching_operators(booking):
     dest_lng = float(pickup_lng) + 0.02
     dest_addr = f"Farmer {booking.farmer.username}'s Field, {pickup_addr}"
 
+    expires_at = timezone.now() + timezone.timedelta(minutes=15)
     assignment = OperatorJobAssignment.objects.create(
         booking=booking,
         operator=operator_profile,
@@ -171,6 +248,7 @@ def dispatch_booking_to_matching_operators(booking):
         current_operator_lng=operator_profile.current_longitude,
         estimated_travel_distance_km=distance_km,
         estimated_arrival_minutes=travel_mins,
+        expires_at=expires_at,
         status_notes=f"AI Matched with score {top_candidate['score']}/100"
     )
 
@@ -421,6 +499,17 @@ def operator_accept_job_view(request, pk):
         booking.operator_assigned = user
         booking.requires_operator = True
         booking.save()
+
+        # Atomically invalidate / cancel competing requests for the same booking
+        competing = OperatorJobAssignment.objects.filter(
+            booking=booking,
+            status='REQUESTED'
+        ).exclude(pk=assignment.pk)
+        for comp in competing:
+            comp.status = 'CANCELLED'
+            comp.cancelled_at = timezone.now()
+            comp.status_notes = f"Assignment awarded to operator {assignment.operator.full_name or user.username}."
+            comp.save()
 
         # Update Operator Work Status
         assignment.operator.current_work_status = 'On Job'
@@ -830,3 +919,52 @@ def get_job_tracking_data_view(request, pk):
             "completed_at": assignment.completed_at
         }
     })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def owner_request_operator_view(request, booking_id):
+    """
+    Machine Owner workflow:
+    Machine Owner lists or manages equipment and requests an Operator when needed.
+    Identifies equipment pickup location and requirements -> AI finds nearby eligible Operators
+    -> sends job requests -> selected Operator accepts -> Owner and Farmer receive updates.
+    Prevents duplicate assignments if active request already exists.
+    """
+    user = request.user
+    try:
+        booking = Booking.objects.select_related('equipment', 'equipment__owner', 'farmer').get(pk=booking_id)
+    except Booking.DoesNotExist:
+        return Response({"error": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Permission check: Machine Owner or Admin
+    if booking.equipment.owner != user and user.role != 'Admin':
+        return Response({"error": "Only the machine owner or Admin can request an operator for this equipment."}, status=status.HTTP_403_FORBIDDEN)
+
+    # Avoid duplicate active operator request
+    existing_active = OperatorJobAssignment.objects.filter(
+        booking=booking,
+        status__in=['REQUESTED', 'ACCEPTED', 'TRAVELLING_TO_PICKUP', 'ARRIVED_AT_PICKUP',
+                    'MACHINE_COLLECTED', 'TRAVELLING_TO_FARM', 'ARRIVED_AT_FARM', 'IN_PROGRESS']
+    ).first()
+
+    if existing_active:
+        return Response({
+            "message": f"An active operator assignment (#{existing_active.id}) already exists in status '{existing_active.status}'.",
+            "assignment": OperatorJobAssignmentSerializer(existing_active).data
+        }, status=status.HTTP_200_OK)
+
+    booking.requires_operator = True
+    booking.save()
+
+    assignment = dispatch_booking_to_matching_operators(booking)
+    if assignment:
+        Notification.objects.create(
+            user=booking.farmer,
+            content=f"Machine owner {user.username} requested an operator for Booking #{booking.id}. AI match initiated."
+        )
+        return Response(OperatorJobAssignmentSerializer(assignment).data, status=status.HTTP_201_CREATED)
+    else:
+        return Response({
+            "message": "Operator request recorded. No online verified operators are currently in radius, will auto-dispatch once an operator goes online."
+        }, status=status.HTTP_200_OK)

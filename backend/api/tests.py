@@ -181,3 +181,40 @@ class OperatorModuleTests(TestCase):
         # Attempt illegal transition backwards to REQUESTED
         res = self.client.post(f'/api/operator/jobs/{assignment.id}/status/', {'status': 'REQUESTED'})
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_operator_online_toggle_and_nearby_discovery(self):
+        self.client.force_authenticate(user=self.operator_user)
+        # 1. Toggle Online with GPS Coordinates
+        res = self.client.post('/api/operator/availability/', {
+            'is_online': True,
+            'current_latitude': 11.0200,
+            'current_longitude': 76.9600
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data['is_online'])
+
+        # 2. Farmer / Owner queries nearby online operators
+        self.client.force_authenticate(user=self.farmer)
+        nearby_res = self.client.get('/api/operator/nearby/?latitude=11.0180&longitude=76.9560')
+        self.assertEqual(nearby_res.status_code, status.HTTP_200_OK)
+        self.assertTrue(len(nearby_res.data) >= 1)
+        self.assertEqual(nearby_res.data[0]['name'], 'Ramesh Kumar')
+
+    def test_owner_request_operator_workflow(self):
+        # Farmer creates regular booking without operator
+        self.client.force_authenticate(user=self.farmer)
+        now = timezone.now()
+        b_res = self.client.post('/api/bookings/', {
+            'equipment': self.equipment.id,
+            'start_date': (now + timezone.timedelta(days=1)).isoformat(),
+            'end_date': (now + timezone.timedelta(days=2)).isoformat(),
+            'delivery_option': 'Pickup'
+        }, format='json')
+        b_id = b_res.data['id']
+
+        # Machine Owner approves and requests Operator assistance
+        self.client.force_authenticate(user=self.owner)
+        self.client.patch(f'/api/bookings/{b_id}/status/', {'status': 'Approved'}, format='json')
+        req_res = self.client.post(f'/api/operator/request/{b_id}/')
+        self.assertEqual(req_res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(req_res.data['status'], 'REQUESTED')

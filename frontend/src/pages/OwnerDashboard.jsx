@@ -221,6 +221,18 @@ export default function OwnerDashboard() {
     }
   };
 
+  const handleRequestOperator = async (bookingId) => {
+    try {
+      const res = await apiFetch(`/api/operator/request/${bookingId}/`, {
+        method: 'POST'
+      });
+      alert(res.message || "AI Operator Dispatch initiated! Nearby online verified operators notified.");
+      loadOwnerData();
+    } catch (e) {
+      alert("Operator request failed: " + e.message);
+    }
+  };
+
   const handleSuggestPrice = async () => {
     setSuggestLoading(true);
     setSuggestResult(null);
@@ -485,6 +497,20 @@ export default function OwnerDashboard() {
                     <p className="text-slate-400">Booking ID: <strong className="text-slate-700 dark:text-slate-350">#AGR-{b.id}</strong></p>
                   </div>
                   <div className="flex gap-2">
+                    {['Approved', 'In Progress'].includes(b.status) && !b.operator_assigned && (
+                      <button
+                        onClick={() => handleRequestOperator(b.id)}
+                        className="px-2.5 py-1.5 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-600 hover:text-white transition-all text-xs font-bold flex items-center gap-1"
+                        title="Dispatch nearby verified operator for this machinery"
+                      >
+                        🚜 Request Operator
+                      </button>
+                    )}
+                    {b.operator_assigned && (
+                      <span className="px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-xs font-bold flex items-center gap-1">
+                        ✓ Operator Assigned
+                      </span>
+                    )}
                     {b.status === 'Approved' && (
                       <button
                         onClick={() => handleBookingStatus(b.id, 'In Progress')}

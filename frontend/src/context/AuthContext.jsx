@@ -1386,10 +1386,20 @@ const mockApiRouter = async (endpoint, options = {}) => {
     return profile;
   }
 
-  // Operator Availability toggle
+  // Operator Availability and Online toggle
   if (cleanEndpoint === '/api/operator/availability/' && (method === 'PATCH' || method === 'POST')) {
     let profile = db.operator_profiles.find(p => p.user_id === (currentUser?.id || 4));
     if (profile) {
+      if (body.is_online !== undefined) {
+        profile.is_online = body.is_online;
+        if (body.is_online) {
+          profile.is_available = true;
+          if (profile.current_work_status === 'Offline') profile.current_work_status = 'Available';
+        } else {
+          profile.is_available = false;
+          profile.current_work_status = 'Offline';
+        }
+      }
       if (body.is_available !== undefined) {
         profile.is_available = body.is_available;
         profile.current_work_status = body.is_available ? 'Available' : 'Offline';
@@ -1399,10 +1409,75 @@ const mockApiRouter = async (endpoint, options = {}) => {
         profile.current_latitude = parseFloat(body.current_latitude);
         profile.current_longitude = parseFloat(body.current_longitude);
       }
+      profile.last_seen_at = new Date().toISOString();
       saveMockDB(db);
       return profile;
     }
     throw new Error("Operator profile not found.");
+  }
+
+  // Nearby online operators list
+  if (cleanEndpoint === '/api/operator/nearby/' && method === 'GET') {
+    return (db.operator_profiles || []).filter(p => p.is_online).map(p => ({
+      id: p.id,
+      user_id: p.user_id,
+      name: p.full_name || p.username,
+      phone: p.phone,
+      rating: p.reliability_score || 4.9,
+      latitude: p.current_latitude,
+      longitude: p.current_longitude,
+      is_online: p.is_online,
+      is_available: p.is_available,
+      work_status: p.current_work_status,
+      distance_km: 4.8,
+      service_radius_km: p.service_radius_km,
+      supported_machinery: p.supported_machinery,
+      hourly_rate: p.hourly_compensation_rate
+    }));
+  }
+
+  // Machine Owner request operator for booking
+  if (cleanEndpoint.startsWith('/api/operator/request/') && method === 'POST') {
+    const bId = parseInt(cleanEndpoint.split('/')[4]);
+    const booking = db.bookings.find(b => b.id === bId);
+    if (!booking) throw new Error("Booking not found.");
+    booking.requires_operator = true;
+
+    let opProfile = db.operator_profiles.find(p => p.is_online && p.verification_status === 'Verified') || db.operator_profiles[0];
+    const newAssign = {
+      id: (db.operator_assignments?.length || 0) + 1,
+      booking: booking.id,
+      booking_id: booking.id,
+      operator: opProfile.id,
+      operator_name: opProfile.full_name,
+      operator_username: opProfile.username,
+      operator_phone: opProfile.phone,
+      operator_rating: opProfile.reliability_score,
+      status: 'REQUESTED',
+      compensation_amount: 650.00,
+      pickup_latitude: booking.equipment_details?.location_latitude || 11.0168,
+      pickup_longitude: booking.equipment_details?.location_longitude || 76.9558,
+      pickup_address: booking.equipment_details?.address || "Coimbatore, Tamil Nadu",
+      destination_latitude: 10.9850,
+      destination_longitude: 76.9750,
+      destination_address: "Farmer Field, Coimbatore Rural",
+      current_operator_lat: opProfile.current_latitude,
+      current_operator_lng: opProfile.current_longitude,
+      estimated_travel_distance_km: 7.2,
+      estimated_arrival_minutes: 18,
+      expires_at: new Date(Date.now() + 15 * 60000).toISOString(),
+      farmer_name: booking.farmer_name,
+      owner_name: booking.equipment_details?.owner_name || "owner",
+      machine_title: booking.equipment_details?.title,
+      machine_category: booking.equipment_details?.category,
+      machine_image: booking.equipment_details?.image_url,
+      start_date: booking.start_date,
+      end_date: booking.end_date,
+      requested_at: new Date().toISOString()
+    };
+    db.operator_assignments.push(newAssign);
+    saveMockDB(db);
+    return newAssign;
   }
 
   // Operator Dashboard

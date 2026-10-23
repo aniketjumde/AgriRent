@@ -15,7 +15,7 @@ class OperatorProfileSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'user_id', 'username', 'full_name', 'phone', 'experience_years',
             'skills', 'supported_machinery', 'service_area', 'service_radius_km',
-            'current_latitude', 'current_longitude', 'working_hours', 'is_available',
+            'current_latitude', 'current_longitude', 'working_hours', 'is_available', 'is_online', 'last_seen_at',
             'current_work_status', 'verification_status', 'verification_notes',
             'license_number', 'document_url', 'hourly_compensation_rate',
             'total_jobs_completed', 'reliability_score', 'aadhaar_kyc_status',
@@ -146,7 +146,7 @@ class OperatorJobAssignmentSerializer(serializers.ModelSerializer):
             'estimated_travel_distance_km', 'estimated_arrival_minutes', 'eta_timestamp',
             'farmer_name', 'farmer_phone', 'owner_name', 'owner_phone',
             'machine_title', 'machine_category', 'machine_image',
-            'start_date', 'end_date',
+            'start_date', 'end_date', 'expires_at',
             'requested_at', 'accepted_at', 'pickup_arrival_at', 'machine_collected_at',
             'farm_arrival_at', 'work_started_at', 'completed_at', 'rejected_at', 'cancelled_at',
             'rejection_reason', 'status_notes', 'status_history'
