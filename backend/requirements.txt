@@ -8,3 +8,4 @@ scikit-learn>=1.2.0
 psycopg2-binary
 razorpay>=2.0.1
 requests>=2.31.0
+gunicorn
