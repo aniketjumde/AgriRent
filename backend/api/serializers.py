@@ -1,5 +1,28 @@
 from rest_framework import serializers
-from .models import User, Equipment, Booking, Review, Message, Notification, SupportTicket, PricePrediction, Recommendation
+from .models import (
+    User, Equipment, Booking, Review, Message, Notification, SupportTicket,
+    PricePrediction, Recommendation, OperatorProfile, OperatorJobAssignment, JobStatusHistory
+)
+
+class OperatorProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    reliability_score = serializers.FloatField(source='user.reliability_score', read_only=True)
+    aadhaar_kyc_status = serializers.CharField(source='user.aadhaar_kyc_status', read_only=True)
+
+    class Meta:
+        model = OperatorProfile
+        fields = (
+            'id', 'user_id', 'username', 'full_name', 'phone', 'experience_years',
+            'skills', 'supported_machinery', 'service_area', 'service_radius_km',
+            'current_latitude', 'current_longitude', 'working_hours', 'is_available',
+            'current_work_status', 'verification_status', 'verification_notes',
+            'license_number', 'document_url', 'hourly_compensation_rate',
+            'total_jobs_completed', 'reliability_score', 'aadhaar_kyc_status',
+            'created_at', 'updated_at'
+        )
+        read_only_fields = ('user_id', 'username', 'verification_status', 'reliability_score', 'aadhaar_kyc_status', 'total_jobs_completed')
+
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -9,10 +32,11 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'email', 'password', 'role', 'phone_number', 'is_verified', 'reliability_score', 'aadhaar_kyc_status', 'aadhaar_number_masked')
 
     def create(self, validated_data):
+        role = validated_data.get('role', 'Farmer')
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data.get('email', ''),
-            role=validated_data.get('role', 'Farmer'),
+            role=role,
             phone_number=validated_data.get('phone_number', ''),
             is_verified=False,
             reliability_score=4.8,
@@ -20,16 +44,33 @@ class UserSerializer(serializers.ModelSerializer):
             aadhaar_number_masked='XXXX-XXXX-1234'
         )
         user.set_password(validated_data['password'])
-        # For simplicity, assign an OTP code on registration
         user.otp_code = "123456" # Default test OTP
         user.save()
+
+        # If registered as Operator, auto-create associated OperatorProfile
+        if role == 'Operator':
+            OperatorProfile.objects.create(
+                user=user,
+                full_name=user.username.capitalize(),
+                phone=user.phone_number or '',
+                skills=['Machinery Operation', 'Field Maintenance'],
+                supported_machinery=['Tractor', 'Harvester', 'Rotavator'],
+                verification_status='Pending'
+            )
+
         return user
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    operator_profile = OperatorProfileSerializer(read_only=True)
+
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'role', 'phone_number', 'is_verified', 'reliability_score', 'aadhaar_kyc_status', 'aadhaar_number_masked')
+        fields = (
+            'id', 'username', 'email', 'role', 'phone_number', 'is_verified',
+            'reliability_score', 'aadhaar_kyc_status', 'aadhaar_number_masked',
+            'operator_profile'
+        )
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -69,11 +110,57 @@ class EquipmentSerializer(serializers.ModelSerializer):
         return 0.0
 
 
+class JobStatusHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobStatusHistory
+        fields = ('id', 'assignment', 'from_status', 'to_status', 'recorded_at', 'operator_lat', 'operator_lng', 'note')
+
+
+class OperatorJobAssignmentSerializer(serializers.ModelSerializer):
+    operator_name = serializers.CharField(source='operator.full_name', read_only=True)
+    operator_username = serializers.CharField(source='operator.user.username', read_only=True)
+    operator_phone = serializers.CharField(source='operator.phone', read_only=True)
+    operator_rating = serializers.FloatField(source='operator.user.reliability_score', read_only=True)
+    
+    # Nested booking and equipment info
+    booking_id = serializers.IntegerField(source='booking.id', read_only=True)
+    farmer_name = serializers.CharField(source='booking.farmer.username', read_only=True)
+    farmer_phone = serializers.CharField(source='booking.farmer.phone_number', read_only=True)
+    owner_name = serializers.CharField(source='booking.equipment.owner.username', read_only=True)
+    owner_phone = serializers.CharField(source='booking.equipment.owner.phone_number', read_only=True)
+    machine_title = serializers.CharField(source='booking.equipment.title', read_only=True)
+    machine_category = serializers.CharField(source='booking.equipment.category', read_only=True)
+    machine_image = serializers.CharField(source='booking.equipment.image_url', read_only=True)
+    start_date = serializers.DateTimeField(source='booking.start_date', read_only=True)
+    end_date = serializers.DateTimeField(source='booking.end_date', read_only=True)
+    status_history = JobStatusHistorySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = OperatorJobAssignment
+        fields = (
+            'id', 'booking', 'booking_id', 'operator', 'operator_name', 'operator_username',
+            'operator_phone', 'operator_rating', 'status', 'compensation_amount',
+            'pickup_latitude', 'pickup_longitude', 'pickup_address',
+            'destination_latitude', 'destination_longitude', 'destination_address',
+            'current_operator_lat', 'current_operator_lng',
+            'estimated_travel_distance_km', 'estimated_arrival_minutes', 'eta_timestamp',
+            'farmer_name', 'farmer_phone', 'owner_name', 'owner_phone',
+            'machine_title', 'machine_category', 'machine_image',
+            'start_date', 'end_date',
+            'requested_at', 'accepted_at', 'pickup_arrival_at', 'machine_collected_at',
+            'farm_arrival_at', 'work_started_at', 'completed_at', 'rejected_at', 'cancelled_at',
+            'rejection_reason', 'status_notes', 'status_history'
+        )
+        read_only_fields = ('requested_at', 'accepted_at', 'completed_at')
+
+
 class BookingSerializer(serializers.ModelSerializer):
     farmer_name = serializers.CharField(source='farmer.username', read_only=True)
     farmer_reliability = serializers.FloatField(source='farmer.reliability_score', read_only=True)
     farmer_kyc_status = serializers.CharField(source='farmer.aadhaar_kyc_status', read_only=True)
     equipment_details = EquipmentSerializer(source='equipment', read_only=True)
+    operator_assigned_name = serializers.CharField(source='operator_assigned.username', read_only=True, default='')
+    latest_assignment = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
@@ -82,11 +169,29 @@ class BookingSerializer(serializers.ModelSerializer):
             'farmer_reliability', 'farmer_kyc_status', 'start_date', 'end_date',
             'status', 'total_cost', 'delivery_option', 'notes', 'created_at',
             'escrow_status', 'micro_rental_shared', 'insurance_opt_in',
-            'insurance_claim_status', 'before_rental_image', 'after_rental_image',
+            'insurance_claim_status', 'requires_operator', 'operator_assigned',
+            'operator_assigned_name', 'latest_assignment',
+            'before_rental_image', 'after_rental_image',
             'damage_severity', 'damage_dispute_report', 'blockchain_contract_hash',
             'blockchain_ipfs_hash', 'carbon_saved_kg'
         )
         read_only_fields = ('farmer', 'total_cost')
+
+    def get_latest_assignment(self, obj):
+        latest = obj.operator_assignments.order_by('-requested_at').first()
+        if latest:
+            return {
+                'id': latest.id,
+                'status': latest.status,
+                'operator_name': latest.operator.full_name or latest.operator.user.username,
+                'operator_phone': latest.operator.phone or latest.operator.user.phone_number,
+                'current_operator_lat': float(latest.current_operator_lat),
+                'current_operator_lng': float(latest.current_operator_lng),
+                'estimated_arrival_minutes': latest.estimated_arrival_minutes,
+                'estimated_travel_distance_km': latest.estimated_travel_distance_km,
+                'compensation_amount': float(latest.compensation_amount)
+            }
+        return None
 
 
 class MessageSerializer(serializers.ModelSerializer):

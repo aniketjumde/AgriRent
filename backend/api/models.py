@@ -5,6 +5,7 @@ class User(AbstractUser):
     ROLE_CHOICES = (
         ('Farmer', 'Farmer'),
         ('Owner', 'Owner'),
+        ('Operator', 'Operator'),
         ('Admin', 'Admin'),
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='Farmer')
@@ -12,13 +13,45 @@ class User(AbstractUser):
     otp_code = models.CharField(max_length=6, blank=True, null=True)
     is_verified = models.BooleanField(default=False)
     
-    # Farmer & Owner Trust Score fields
+    # Farmer & Owner & Operator Trust Score fields
     reliability_score = models.FloatField(default=4.8)
     aadhaar_kyc_status = models.CharField(max_length=20, default='Verified') # Verified, Pending, Not Started
     aadhaar_number_masked = models.CharField(max_length=15, default='XXXX-XXXX-1234')
 
     def __str__(self):
         return f"{self.username} ({self.role})"
+
+
+class OperatorProfile(models.Model):
+    VERIFICATION_CHOICES = (
+        ('Pending', 'Pending'),
+        ('Verified', 'Verified'),
+        ('Rejected', 'Rejected'),
+    )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='operator_profile')
+    full_name = models.CharField(max_length=120, blank=True, default='')
+    phone = models.CharField(max_length=20, blank=True, default='')
+    experience_years = models.PositiveIntegerField(default=3)
+    skills = models.JSONField(default=list, blank=True) # list of skills: ['Deep Plowing', 'Paddy Harvesting', 'Laser Leveling']
+    supported_machinery = models.JSONField(default=list, blank=True) # ['Tractor', 'Harvester', 'Rotavator']
+    service_area = models.CharField(max_length=150, default='Coimbatore & Surrounding Taluks')
+    service_radius_km = models.FloatField(default=25.0)
+    current_latitude = models.DecimalField(max_digits=9, decimal_places=6, default=11.0168)
+    current_longitude = models.DecimalField(max_digits=9, decimal_places=6, default=76.9558)
+    working_hours = models.CharField(max_length=100, default='06:00 AM - 08:00 PM')
+    is_available = models.BooleanField(default=True)
+    current_work_status = models.CharField(max_length=50, default='Available') # Available, On Job, Offline
+    verification_status = models.CharField(max_length=20, choices=VERIFICATION_CHOICES, default='Pending')
+    verification_notes = models.TextField(blank=True, default='')
+    license_number = models.CharField(max_length=50, blank=True, default='DL-TN-37-20210048')
+    document_url = models.TextField(blank=True, default='') # link/base64 to driving license / operator certificate
+    hourly_compensation_rate = models.DecimalField(max_digits=8, decimal_places=2, default=250.00)
+    total_jobs_completed = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Operator: {self.user.username} [{self.verification_status}]"
 
 
 class Equipment(models.Model):
@@ -86,6 +119,12 @@ class Booking(models.Model):
     insurance_opt_in = models.BooleanField(default=False)
     insurance_claim_status = models.CharField(max_length=30, default='N/A') # N/A, Submitted, Under Review, Paid, Denied
     
+    # Operator requirement
+    requires_operator = models.BooleanField(default=False)
+    operator_assigned = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_bookings'
+    )
+    
     # Damage Detection
     before_rental_image = models.TextField(blank=True, null=True)
     after_rental_image = models.TextField(blank=True, null=True)
@@ -101,6 +140,78 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"Booking #{self.id}: {self.farmer.username} -> {self.equipment.title} ({self.status})"
+
+
+class OperatorJobAssignment(models.Model):
+    JOB_STATUS_CHOICES = (
+        ('REQUESTED', 'REQUESTED'),
+        ('ACCEPTED', 'ACCEPTED'),
+        ('TRAVELLING_TO_PICKUP', 'TRAVELLING_TO_PICKUP'),
+        ('ARRIVED_AT_PICKUP', 'ARRIVED_AT_PICKUP'),
+        ('MACHINE_COLLECTED', 'MACHINE_COLLECTED'),
+        ('TRAVELLING_TO_FARM', 'TRAVELLING_TO_FARM'),
+        ('ARRIVED_AT_FARM', 'ARRIVED_AT_FARM'),
+        ('IN_PROGRESS', 'IN_PROGRESS'),
+        ('COMPLETED', 'COMPLETED'),
+        ('REJECTED', 'REJECTED'),
+        ('CANCELLED', 'CANCELLED'),
+    )
+
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='operator_assignments')
+    operator = models.ForeignKey(OperatorProfile, on_delete=models.CASCADE, related_name='job_assignments')
+    status = models.CharField(max_length=30, choices=JOB_STATUS_CHOICES, default='REQUESTED')
+    
+    # Financial compensation
+    compensation_amount = models.DecimalField(max_digits=10, decimal_places=2, default=500.00)
+    
+    # Routing / GPS tracking data
+    pickup_latitude = models.DecimalField(max_digits=9, decimal_places=6, default=11.0168)
+    pickup_longitude = models.DecimalField(max_digits=9, decimal_places=6, default=76.9558)
+    pickup_address = models.CharField(max_length=255, default='Coimbatore, Tamil Nadu')
+    
+    destination_latitude = models.DecimalField(max_digits=9, decimal_places=6, default=11.0000)
+    destination_longitude = models.DecimalField(max_digits=9, decimal_places=6, default=76.9000)
+    destination_address = models.CharField(max_length=255, default='Coimbatore Rural Farm Area')
+    
+    current_operator_lat = models.DecimalField(max_digits=9, decimal_places=6, default=11.0168)
+    current_operator_lng = models.DecimalField(max_digits=9, decimal_places=6, default=76.9558)
+    
+    estimated_travel_distance_km = models.FloatField(default=12.5)
+    estimated_arrival_minutes = models.IntegerField(default=25)
+    eta_timestamp = models.DateTimeField(null=True, blank=True)
+    
+    # Lifecycle Timestamps
+    requested_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    pickup_arrival_at = models.DateTimeField(null=True, blank=True)
+    machine_collected_at = models.DateTimeField(null=True, blank=True)
+    farm_arrival_at = models.DateTimeField(null=True, blank=True)
+    work_started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    
+    rejection_reason = models.TextField(blank=True, default='')
+    status_notes = models.TextField(blank=True, default='')
+
+    class Meta:
+        ordering = ['-requested_at']
+
+    def __str__(self):
+        return f"JobAssignment #{self.id} for Booking #{self.booking_id} -> Op:{self.operator.user.username} ({self.status})"
+
+
+class JobStatusHistory(models.Model):
+    assignment = models.ForeignKey(OperatorJobAssignment, on_delete=models.CASCADE, related_name='status_history')
+    from_status = models.CharField(max_length=30, blank=True, default='')
+    to_status = models.CharField(max_length=30)
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    operator_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    operator_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    note = models.TextField(blank=True, default='')
+
+    def __str__(self):
+        return f"StatusHistory #{self.assignment_id}: {self.from_status} -> {self.to_status}"
 
 
 class Review(models.Model):

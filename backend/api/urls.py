@@ -8,6 +8,12 @@ from .views import (
     farmer_dashboard_analytics, owner_dashboard_analytics, admin_dashboard_analytics,
     weather_forecast_view, govt_schemes_view, booking_damage_detection_view
 )
+from .operator_views import (
+    OperatorProfileView, update_operator_availability_view, admin_operator_verifications_view,
+    find_matching_operators_view, operator_dashboard_jobs_view,
+    operator_accept_job_view, operator_reject_job_view,
+    update_job_status_transition_view, update_operator_location_view, get_job_tracking_data_view
+)
 
 urlpatterns = [
     # Auth Routes
@@ -29,6 +35,19 @@ urlpatterns = [
     path('bookings/<int:pk>/status/', update_booking_status_view, name='booking-status-update'),
     path('bookings/<int:pk>/messages/', booking_chat_view, name='booking-chat'),
     path('bookings/<int:pk>/damage/', booking_damage_detection_view, name='booking-damage-detection'),
+
+    # Operator Management & Smart Jobs APIs
+    path('operator/profile/', OperatorProfileView.as_view(), name='operator-profile'),
+    path('operator/availability/', update_operator_availability_view, name='operator-availability'),
+    path('operator/dashboard/', operator_dashboard_jobs_view, name='operator-dashboard'),
+    path('operator/jobs/<int:pk>/accept/', operator_accept_job_view, name='operator-accept-job'),
+    path('operator/jobs/<int:pk>/reject/', operator_reject_job_view, name='operator-reject-job'),
+    path('operator/jobs/<int:pk>/status/', update_job_status_transition_view, name='operator-job-status'),
+    path('operator/jobs/<int:pk>/location/', update_operator_location_view, name='operator-location-update'),
+    path('operator/jobs/<int:pk>/tracking/', get_job_tracking_data_view, name='operator-job-tracking'),
+    path('operator/match/<int:booking_id>/', find_matching_operators_view, name='operator-match-booking'),
+    path('operator/verifications/', admin_operator_verifications_view, name='operator-verifications-list'),
+    path('operator/verifications/<int:pk>/', admin_operator_verifications_view, name='operator-verification-update'),
 
     # Notifications & Support
     path('notifications/', notification_list_view, name='notifications-list'),

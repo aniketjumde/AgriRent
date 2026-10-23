@@ -158,7 +158,7 @@ export default function SignupPage({ onNavigate }) {
             {/* Role select */}
             <div>
               <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Registering As</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => setRole('Farmer')}
@@ -180,6 +180,17 @@ export default function SignupPage({ onNavigate }) {
                   }`}
                 >
                   {t('owner')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('Operator')}
+                  className={`py-2 rounded-xl text-xs font-bold transition-all border ${
+                    role === 'Operator'
+                      ? 'bg-emerald-50 border-emerald-500 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                  }`}
+                >
+                  {t('operator') || 'Operator'}
                 </button>
               </div>
             </div>

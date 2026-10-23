@@ -46,6 +46,7 @@ const getMockDB = () => {
     { id: 1, username: 'farmer', role: 'Farmer', email: 'farmer@agrirent.com', phone_number: '+919876543211', is_verified: true, otp_code: '123456', password: 'password123' },
     { id: 2, username: 'owner', role: 'Owner', email: 'owner@agrirent.com', phone_number: '+919876543212', is_verified: true, otp_code: '123456', password: 'password123' },
     { id: 3, username: 'admin', role: 'Admin', email: 'admin@agrirent.com', phone_number: '+919876543210', is_verified: true, otp_code: '123456', password: 'password123' },
+    { id: 4, username: 'operator', role: 'Operator', email: 'operator@agrirent.com', phone_number: '+919876543213', is_verified: true, otp_code: '123456', password: 'password123' },
   ];
 
   for (let i = 1; i <= 20; i++) {
@@ -540,10 +541,78 @@ const getMockDB = () => {
     });
   }
 
+  const defaultOperatorProfile = {
+    id: 1,
+    user_id: 4,
+    username: 'operator',
+    full_name: 'Ramesh Kumar',
+    phone: '+919876543213',
+    experience_years: 6,
+    skills: ['Tractor Operation', 'Harvester Operation', 'Rotary Tillage', 'Paddy Puddling'],
+    supported_machinery: ['Tractor', 'Harvester', 'Rotavator', 'Seeder', 'Sprayer'],
+    service_area: 'Coimbatore & Tiruppur Rural',
+    service_radius_km: 35.0,
+    current_latitude: 11.0250,
+    current_longitude: 76.9620,
+    working_hours: '06:00 AM - 07:30 PM',
+    is_available: true,
+    current_work_status: 'Available',
+    verification_status: 'Verified',
+    verification_notes: 'All licenses and KYC verified by admin.',
+    license_number: 'DL-TN-38-20180092',
+    document_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600',
+    hourly_compensation_rate: 280.00,
+    total_jobs_completed: 14,
+    reliability_score: 4.9,
+    aadhaar_kyc_status: 'Verified'
+  };
+
+  const defaultAssignments = [
+    {
+      id: 1,
+      booking: 1,
+      booking_id: 1,
+      operator: 1,
+      operator_name: 'Ramesh Kumar',
+      operator_username: 'operator',
+      operator_phone: '+919876543213',
+      operator_rating: 4.9,
+      status: 'REQUESTED',
+      compensation_amount: 850.00,
+      pickup_latitude: 11.0168,
+      pickup_longitude: 76.9558,
+      pickup_address: 'Coimbatore, Tamil Nadu',
+      destination_latitude: 10.9850,
+      destination_longitude: 76.9750,
+      destination_address: 'Farmer Field, Pollachi Road, Coimbatore',
+      current_operator_lat: 11.0250,
+      current_operator_lng: 76.9620,
+      estimated_travel_distance_km: 8.5,
+      estimated_arrival_minutes: 20,
+      farmer_name: 'farmer',
+      farmer_phone: '+919876543211',
+      owner_name: 'owner',
+      owner_phone: '+919876543212',
+      machine_title: 'John Deere 5050D Tractor',
+      machine_category: 'Tractor',
+      machine_image: 'https://images.unsplash.com/photo-1592878904946-b3cd8ae243d0?auto=format&fit=crop&q=80&w=600',
+      start_date: '2026-06-20T09:00:00.000Z',
+      end_date: '2026-06-23T18:00:00.000Z',
+      requested_at: new Date().toISOString(),
+      accepted_at: null,
+      status_notes: 'AI Matched with score 94.2/100',
+      status_history: [
+        { id: 1, from_status: '', to_status: 'REQUESTED', recorded_at: new Date().toISOString(), note: 'Matched by AI Engine' }
+      ]
+    }
+  ];
+
   const defaultDB = {
     users: mockUsers,
     equipment: mockEquipment,
     bookings: mockBookings,
+    operator_profiles: [defaultOperatorProfile],
+    operator_assignments: defaultAssignments,
     messages: [
       { id: 1, booking: 1, sender: 1, sender_name: "farmer", content: "Hi! Is the tractor service ready?", timestamp: "2026-06-18T10:05:00.000Z" },
     ],
@@ -1262,6 +1331,327 @@ const mockApiRouter = async (endpoint, options = {}) => {
       repair_cost_estimate: severity !== "None" ? 2500.00 : 0.0,
       dispute_status: severity !== "None" ? "Raised" : "None"
     };
+  }
+
+  // Ensure mock db arrays exist
+  if (!db.operator_profiles) db.operator_profiles = [];
+  if (!db.operator_assignments) db.operator_assignments = [];
+
+  // --- OPERATOR MOCK ENDPOINTS ---
+
+  // Operator Profile GET / PUT
+  if (cleanEndpoint === '/api/operator/profile/' && method === 'GET') {
+    let profile = db.operator_profiles.find(p => p.user_id === (currentUser?.id || 4));
+    if (!profile) {
+      profile = {
+        id: db.operator_profiles.length + 1,
+        user_id: currentUser ? currentUser.id : 4,
+        username: currentUser ? currentUser.username : 'operator',
+        full_name: currentUser ? currentUser.username.toUpperCase() : 'Operator',
+        phone: currentUser ? currentUser.phone_number : '+919876543213',
+        experience_years: 5,
+        skills: ['Tractor Operation', 'Harvester Operation'],
+        supported_machinery: ['Tractor', 'Harvester'],
+        service_area: 'Coimbatore Rural',
+        service_radius_km: 30.0,
+        current_latitude: 11.0250,
+        current_longitude: 76.9620,
+        working_hours: '06:00 AM - 07:30 PM',
+        is_available: true,
+        current_work_status: 'Available',
+        verification_status: 'Verified',
+        verification_notes: 'All licenses verified.',
+        license_number: 'DL-TN-38-20180092',
+        document_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600',
+        hourly_compensation_rate: 280.00,
+        total_jobs_completed: 12,
+        reliability_score: 4.9,
+        aadhaar_kyc_status: 'Verified'
+      };
+      db.operator_profiles.push(profile);
+      saveMockDB(db);
+    }
+    return profile;
+  }
+
+  if (cleanEndpoint === '/api/operator/profile/' && method === 'PUT') {
+    let profile = db.operator_profiles.find(p => p.user_id === (currentUser?.id || 4));
+    if (!profile) {
+      profile = { id: db.operator_profiles.length + 1, user_id: currentUser?.id || 4, ...body };
+      db.operator_profiles.push(profile);
+    } else {
+      Object.assign(profile, body);
+    }
+    saveMockDB(db);
+    return profile;
+  }
+
+  // Operator Availability toggle
+  if (cleanEndpoint === '/api/operator/availability/' && (method === 'PATCH' || method === 'POST')) {
+    let profile = db.operator_profiles.find(p => p.user_id === (currentUser?.id || 4));
+    if (profile) {
+      if (body.is_available !== undefined) {
+        profile.is_available = body.is_available;
+        profile.current_work_status = body.is_available ? 'Available' : 'Offline';
+      }
+      if (body.current_work_status) profile.current_work_status = body.current_work_status;
+      if (body.current_latitude && body.current_longitude) {
+        profile.current_latitude = parseFloat(body.current_latitude);
+        profile.current_longitude = parseFloat(body.current_longitude);
+      }
+      saveMockDB(db);
+      return profile;
+    }
+    throw new Error("Operator profile not found.");
+  }
+
+  // Operator Dashboard
+  if (cleanEndpoint === '/api/operator/dashboard/' && method === 'GET') {
+    let profile = db.operator_profiles.find(p => p.user_id === (currentUser?.id || 4));
+    if (!profile) {
+      profile = {
+        id: 1, user_id: currentUser?.id || 4, username: currentUser?.username || 'operator',
+        full_name: 'Ramesh Kumar', phone: '+919876543213', experience_years: 6,
+        skills: ['Tractor Operation', 'Harvester Operation'],
+        supported_machinery: ['Tractor', 'Harvester'],
+        service_area: 'Coimbatore & Tiruppur Rural',
+        service_radius_km: 35.0,
+        current_latitude: 11.0250, current_longitude: 76.9620,
+        working_hours: '06:00 AM - 07:30 PM',
+        is_available: true, current_work_status: 'Available',
+        verification_status: 'Verified',
+        license_number: 'DL-TN-38-20180092',
+        hourly_compensation_rate: 280.00,
+        total_jobs_completed: 14,
+        reliability_score: 4.9,
+        aadhaar_kyc_status: 'Verified'
+      };
+      db.operator_profiles.push(profile);
+    }
+
+    const allJobs = db.operator_assignments.filter(j => j.operator === profile.id || j.operator_username === (currentUser?.username || 'operator'));
+    const newRequests = allJobs.filter(j => j.status === 'REQUESTED');
+    const activeJobs = allJobs.filter(j => ['ACCEPTED', 'TRAVELLING_TO_PICKUP', 'ARRIVED_AT_PICKUP', 'MACHINE_COLLECTED', 'TRAVELLING_TO_FARM', 'ARRIVED_AT_FARM', 'IN_PROGRESS'].includes(j.status));
+    const completedJobs = allJobs.filter(j => j.status === 'COMPLETED');
+    const historyJobs = allJobs.filter(j => ['COMPLETED', 'REJECTED', 'CANCELLED'].includes(j.status));
+
+    const totalEarnings = completedJobs.reduce((acc, curr) => acc + (parseFloat(curr.compensation_amount) || 0), 0);
+
+    return {
+      profile,
+      summary: {
+        total_jobs_completed: completedJobs.length + profile.total_jobs_completed,
+        active_jobs_count: activeJobs.length,
+        pending_requests_count: newRequests.length,
+        total_earnings: totalEarnings > 0 ? totalEarnings : 3920.00,
+        rating: profile.reliability_score || 4.9,
+        verification_status: profile.verification_status,
+        is_available: profile.is_available
+      },
+      new_requests: newRequests,
+      active_jobs: activeJobs,
+      completed_jobs: completedJobs,
+      history_jobs: historyJobs,
+      nearby_available_jobs: [
+        {
+          booking_id: 101,
+          machine_title: "Mahindra 575 DI Tractor",
+          category: "Tractor",
+          machine_image: "https://images.unsplash.com/photo-1592878904946-b3cd8ae243d0?auto=format&fit=crop&q=80&w=600",
+          farmer_name: "farmer3",
+          owner_name: "owner",
+          pickup_address: "Annur, Coimbatore",
+          distance_km: 7.2,
+          estimated_payout: 650.00,
+          start_date: new Date(Date.now() + 86400000).toISOString(),
+          end_date: new Date(Date.now() + 172800000).toISOString()
+        }
+      ]
+    };
+  }
+
+  // Operator Accept Job
+  if (cleanEndpoint.startsWith('/api/operator/jobs/') && cleanEndpoint.endsWith('/accept/') && method === 'POST') {
+    const id = parseInt(cleanEndpoint.split('/')[4]);
+    const job = db.operator_assignments.find(j => j.id === id);
+    if (!job) throw new Error("Job assignment not found.");
+
+    job.status = 'ACCEPTED';
+    job.accepted_at = new Date().toISOString();
+    job.estimated_arrival_minutes = job.estimated_arrival_minutes || 20;
+
+    // Link booking
+    const booking = db.bookings.find(b => b.id === job.booking || b.id === job.booking_id);
+    if (booking) {
+      booking.operator_assigned = currentUser?.id || 4;
+      booking.requires_operator = true;
+    }
+
+    db.notifications.push({
+      id: db.notifications.length + 1,
+      user: job.owner_id || 2,
+      content: `Operator ${currentUser?.username || 'operator'} accepted booking #${job.booking_id}. Arriving to collect machine in ~${job.estimated_arrival_minutes} mins.`,
+      is_read: false,
+      created_at: new Date().toISOString()
+    });
+
+    db.notifications.push({
+      id: db.notifications.length + 1,
+      user: job.farmer_id || 1,
+      content: `Operator ${currentUser?.username || 'operator'} is assigned to your booking #${job.booking_id}.`,
+      is_read: false,
+      created_at: new Date().toISOString()
+    });
+
+    saveMockDB(db);
+    return job;
+  }
+
+  // Operator Reject Job
+  if (cleanEndpoint.startsWith('/api/operator/jobs/') && cleanEndpoint.endsWith('/reject/') && method === 'POST') {
+    const id = parseInt(cleanEndpoint.split('/')[4]);
+    const job = db.operator_assignments.find(j => j.id === id);
+    if (job) {
+      job.status = 'REJECTED';
+      job.rejected_at = new Date().toISOString();
+      job.rejection_reason = body.reason || 'Declined by operator';
+      saveMockDB(db);
+      return { message: "Job rejected successfully.", assignment_id: job.id, status: 'REJECTED' };
+    }
+    throw new Error("Job assignment not found.");
+  }
+
+  // Operator Status Transition
+  if (cleanEndpoint.startsWith('/api/operator/jobs/') && cleanEndpoint.endsWith('/status/') && (method === 'PATCH' || method === 'POST')) {
+    const id = parseInt(cleanEndpoint.split('/')[4]);
+    const job = db.operator_assignments.find(j => j.id === id);
+    if (!job) throw new Error("Job assignment not found.");
+
+    const oldStatus = job.status;
+    const targetStatus = body.status;
+    job.status = targetStatus;
+    if (body.note) job.status_notes = body.note;
+
+    if (body.latitude && body.longitude) {
+      job.current_operator_lat = parseFloat(body.latitude);
+      job.current_operator_lng = parseFloat(body.longitude);
+    }
+
+    if (!job.status_history) job.status_history = [];
+    job.status_history.push({
+      id: job.status_history.length + 1,
+      from_status: oldStatus,
+      to_status: targetStatus,
+      recorded_at: new Date().toISOString(),
+      note: body.note || ''
+    });
+
+    if (targetStatus === 'MACHINE_COLLECTED') {
+      job.machine_collected_at = new Date().toISOString();
+    } else if (targetStatus === 'ARRIVED_AT_FARM') {
+      job.farm_arrival_at = new Date().toISOString();
+    } else if (targetStatus === 'IN_PROGRESS') {
+      job.work_started_at = new Date().toISOString();
+      const booking = db.bookings.find(b => b.id === (job.booking || job.booking_id));
+      if (booking) booking.status = 'In Progress';
+    } else if (targetStatus === 'COMPLETED') {
+      job.completed_at = new Date().toISOString();
+      const booking = db.bookings.find(b => b.id === (job.booking || job.booking_id));
+      if (booking) {
+        booking.status = 'Completed';
+        booking.escrow_status = 'Released';
+      }
+    }
+
+    saveMockDB(db);
+    return job;
+  }
+
+  // Operator GPS location update
+  if (cleanEndpoint.startsWith('/api/operator/jobs/') && cleanEndpoint.endsWith('/location/') && method === 'POST') {
+    const id = parseInt(cleanEndpoint.split('/')[4]);
+    const job = db.operator_assignments.find(j => j.id === id);
+    if (job) {
+      job.current_operator_lat = parseFloat(body.latitude);
+      job.current_operator_lng = parseFloat(body.longitude);
+      job.estimated_arrival_minutes = Math.max(1, (job.estimated_arrival_minutes || 10) - 1);
+      saveMockDB(db);
+      return {
+        assignment_id: job.id,
+        status: job.status,
+        current_lat: job.current_operator_lat,
+        current_lng: job.current_operator_lng,
+        estimated_arrival_minutes: job.estimated_arrival_minutes
+      };
+    }
+    throw new Error("Job not found.");
+  }
+
+  // Operator Tracking endpoint
+  if (cleanEndpoint.startsWith('/api/operator/jobs/') && cleanEndpoint.endsWith('/tracking/') && method === 'GET') {
+    const id = parseInt(cleanEndpoint.split('/')[4]);
+    const job = db.operator_assignments.find(j => j.id === id);
+    if (job) {
+      return {
+        assignment_id: job.id,
+        booking_id: job.booking_id || job.booking,
+        status: job.status,
+        machine_title: job.machine_title || "John Deere Tractor",
+        operator: {
+          name: job.operator_name || "Ramesh Kumar",
+          phone: job.operator_phone || "+919876543213",
+          rating: 4.9,
+          current_latitude: job.current_operator_lat || 11.0250,
+          current_longitude: job.current_operator_lng || 76.9620
+        },
+        pickup: {
+          address: job.pickup_address || "Coimbatore, Tamil Nadu",
+          latitude: job.pickup_latitude || 11.0168,
+          longitude: job.pickup_longitude || 76.9558,
+          owner_name: job.owner_name || "owner",
+          owner_phone: job.owner_phone || "+919876543212"
+        },
+        destination: {
+          address: job.destination_address || "Farmer Field, Pollachi Road, Coimbatore",
+          latitude: job.destination_latitude || 10.9850,
+          longitude: job.destination_longitude || 76.9750,
+          farmer_name: job.farmer_name || "farmer",
+          farmer_phone: job.farmer_phone || "+919876543211"
+        },
+        eta: {
+          distance_km: job.estimated_travel_distance_km || 6.4,
+          minutes: job.estimated_arrival_minutes || 15,
+          timestamp: new Date(Date.now() + 15 * 60000).toISOString()
+        },
+        milestones: {
+          requested_at: job.requested_at,
+          accepted_at: job.accepted_at,
+          pickup_arrival_at: job.pickup_arrival_at,
+          machine_collected_at: job.machine_collected_at,
+          farm_arrival_at: job.farm_arrival_at,
+          work_started_at: job.work_started_at,
+          completed_at: job.completed_at
+        }
+      };
+    }
+    throw new Error("Job not found.");
+  }
+
+  // Admin Operator Verifications list & update
+  if (cleanEndpoint === '/api/operator/verifications/' && method === 'GET') {
+    return db.operator_profiles || [];
+  }
+
+  if (cleanEndpoint.startsWith('/api/operator/verifications/') && method === 'POST') {
+    const id = parseInt(cleanEndpoint.split('/')[4]);
+    const op = db.operator_profiles.find(p => p.id === id);
+    if (op) {
+      op.verification_status = body.verification_status || 'Verified';
+      op.verification_notes = body.verification_notes || 'Approved by Admin';
+      saveMockDB(db);
+      return op;
+    }
+    throw new Error("Operator profile not found.");
   }
 
   throw new Error(`Endpoint mock handler not found for: ${method} ${endpoint}`);
