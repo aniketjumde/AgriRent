@@ -1,3 +1,5 @@
+from .health_views import health_check_view
+from .upload_views import upload_equipment_image_view
 from .nearby_views import nearby_equipment_view, validate_cart_booking_view
 from django.urls import path
 from .views import (
@@ -24,6 +26,12 @@ from .operator_views import (
 )
 
 urlpatterns = [
+    # Health check for production monitoring
+    path('health/', health_check_view, name='health-check'),
+
+    # Supabase Storage Upload API
+    path('storage/upload/', upload_equipment_image_view, name='storage-upload'),
+
     # Nearby Equipment & Smart Cart APIs
     path('equipment/nearby/', nearby_equipment_view, name='nearby-equipment'),
     path('cart/validate/', validate_cart_booking_view, name='validate-cart-booking'),
