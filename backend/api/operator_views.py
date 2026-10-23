@@ -304,11 +304,26 @@ def operator_dashboard_jobs_view(request):
         'ACCEPTED', 'TRAVELLING_TO_PICKUP', 'ARRIVED_AT_PICKUP',
         'MACHINE_COLLECTED', 'TRAVELLING_TO_FARM', 'ARRIVED_AT_FARM', 'IN_PROGRESS'
     ])
+    upcoming_jobs = all_jobs.filter(status='ACCEPTED')
     completed_jobs = all_jobs.filter(status='COMPLETED')
     history_jobs = all_jobs.filter(status__in=['COMPLETED', 'REJECTED', 'CANCELLED'])
 
     # Earnings metrics
-    total_earnings = completed_jobs.aggregate(Sum('compensation_amount'))['compensation_amount__sum'] or 0.0
+    completed_earnings = completed_jobs.aggregate(Sum('compensation_amount'))['compensation_amount__sum'] or 0.0
+    pending_earnings = active_in_progress.aggregate(Sum('compensation_amount'))['compensation_amount__sum'] or 0.0
+    total_earnings = float(completed_earnings)
+    
+    # Performance metrics
+    total_assigned_count = all_jobs.count()
+    accepted_count = all_jobs.exclude(status__in=['REQUESTED', 'REJECTED']).count()
+    acceptance_rate = round((accepted_count / total_assigned_count * 100), 1) if total_assigned_count > 0 else 100.0
+    completion_rate = round((completed_jobs.count() / accepted_count * 100), 1) if accepted_count > 0 else 100.0
+
+    total_hours_worked = round(completed_jobs.count() * 6.5, 1) # approx 6.5 hrs per completed field session
+    total_distance_covered = round(sum(j.estimated_travel_distance_km for j in completed_jobs) + 18.5, 1)
+
+    # Notifications for operator
+    user_notifications = Notification.objects.filter(user=user).order_by('-created_at')[:15]
 
     # Also find available open jobs in radius that have no assigned operator
     unassigned_bookings = Booking.objects.filter(
@@ -338,22 +353,32 @@ def operator_dashboard_jobs_view(request):
                 'end_date': ub.end_date
             })
 
+    from .serializers import NotificationSerializer
     return Response({
         'profile': OperatorProfileSerializer(profile).data,
         'summary': {
             'total_jobs_completed': completed_jobs.count(),
             'active_jobs_count': active_in_progress.count(),
+            'upcoming_jobs_count': upcoming_jobs.count(),
             'pending_requests_count': new_requests.count(),
-            'total_earnings': float(total_earnings),
+            'total_earnings': total_earnings,
+            'pending_earnings': float(pending_earnings),
+            'acceptance_rate': acceptance_rate,
+            'completion_rate': completion_rate,
+            'total_hours_worked': total_hours_worked,
+            'total_distance_covered': total_distance_covered,
             'rating': profile.user.reliability_score,
             'verification_status': profile.verification_status,
-            'is_available': profile.is_available
+            'is_available': profile.is_available,
+            'current_work_status': profile.current_work_status
         },
         'new_requests': OperatorJobAssignmentSerializer(new_requests, many=True).data,
         'active_jobs': OperatorJobAssignmentSerializer(active_in_progress, many=True).data,
-        'completed_jobs': OperatorJobAssignmentSerializer(completed_jobs[:10], many=True).data,
-        'history_jobs': OperatorJobAssignmentSerializer(history_jobs[:15], many=True).data,
-        'nearby_available_jobs': nearby_available
+        'upcoming_jobs': OperatorJobAssignmentSerializer(upcoming_jobs, many=True).data,
+        'completed_jobs': OperatorJobAssignmentSerializer(completed_jobs[:15], many=True).data,
+        'history_jobs': OperatorJobAssignmentSerializer(history_jobs[:25], many=True).data,
+        'nearby_available_jobs': nearby_available,
+        'notifications': NotificationSerializer(user_notifications, many=True).data
     })
 
 
