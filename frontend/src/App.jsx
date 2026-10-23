@@ -11,6 +11,7 @@ import SignupPage from './pages/SignupPage';
 import FarmerDashboard from './pages/FarmerDashboard';
 import OwnerDashboard from './pages/OwnerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import OperatorDashboard from './pages/OperatorDashboard';
 import SupportCenter from './pages/SupportCenter';
 
 import AIChatBot from './components/AIChatBot';
@@ -201,6 +202,7 @@ function AppContent() {
           <>
             {user.role === 'Farmer' && <FarmerDashboard />}
             {user.role === 'Owner' && <OwnerDashboard />}
+            {user.role === 'Operator' && <OperatorDashboard />}
             {user.role === 'Admin' && <AdminDashboard />}
           </>
         )}

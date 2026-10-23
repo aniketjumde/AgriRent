@@ -86,6 +86,7 @@ export default function FarmerDashboard() {
   const [microRentalShared, setMicroRentalShared] = useState(false);
   const [cooperativeGroup, setCooperativeGroup] = useState('Saravanampatti Farmers Cooperative');
   const [insuranceOptIn, setInsuranceOptIn] = useState(false);
+  const [requiresOperator, setRequiresOperator] = useState(false);
   const [notes, setNotes] = useState('');
   const [bookingLoading, setBookingLoading] = useState(false);
 
@@ -343,7 +344,8 @@ export default function FarmerDashboard() {
           delivery_option: deliveryOption,
           notes: `Usage hours/day: ${usageHours}. ${notes}`,
           micro_rental_shared: microRentalShared,
-          insurance_opt_in: insuranceOptIn
+          insurance_opt_in: insuranceOptIn,
+          requires_operator: requiresOperator
         })
       });
       
@@ -1254,6 +1256,12 @@ export default function FarmerDashboard() {
                             </span>
                           )}
 
+                          {(b.requires_operator || b.operator_assigned) && (
+                            <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 text-[8px] font-black uppercase">
+                              🚜 Operator: {b.latest_assignment?.operator_name || b.operator_assigned_name || 'Requested / Dispatching'}
+                            </span>
+                          )}
+
                           <span className="px-2 py-0.5 rounded bg-teal-50 dark:bg-slate-800 text-teal-700 dark:text-teal-400 text-[8px] font-bold">
                             🌳 {b.carbon_saved_kg || 8.4} kg CO2 Saved
                           </span>
@@ -2067,6 +2075,22 @@ export default function FarmerDashboard() {
                       Add Smart Insurance Protection (+ ₹150/day)
                     </label>
                     <span className="text-[10px] text-slate-450 block leading-tight">Covers damage, machinery breakdown, and theft claims. Claim tracking is automated.</span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    id="requiresOperator"
+                    checked={requiresOperator}
+                    onChange={(e) => setRequiresOperator(e.target.checked)}
+                    className="mt-1 accent-emerald-600 rounded"
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="requiresOperator" className="font-bold text-slate-700 dark:text-slate-200 block">
+                      Request Certified Operator Assistance (+ ₹350 flat fee)
+                    </label>
+                    <span className="text-[10px] text-slate-450 block leading-tight">Automatically dispatches AI-matched nearby verified operator to navigate, collect machine, and execute field operations.</span>
                   </div>
                 </div>
               </div>

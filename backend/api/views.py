@@ -301,6 +301,11 @@ class BookingListCreateView(APIView):
         ipfs_hash = "Qm" + hashlib.sha256(contract_uuid.encode()).hexdigest()[:44]
         contract_hash = "0x" + hashlib.sha256(ipfs_hash.encode()).hexdigest()
         
+        requires_operator = request.data.get('requires_operator', False)
+        if requires_operator:
+            # Add standard operator fee to booking total
+            base_cost += 350.0
+
         booking = Booking.objects.create(
             equipment=equipment,
             farmer=request.user,
@@ -314,6 +319,7 @@ class BookingListCreateView(APIView):
             micro_rental_shared=micro_rental_shared,
             insurance_opt_in=insurance_opt_in,
             insurance_claim_status='N/A' if not insurance_opt_in else 'Verified Policy',
+            requires_operator=requires_operator,
             carbon_saved_kg=round(carbon_saved, 2),
             blockchain_ipfs_hash=ipfs_hash,
             blockchain_contract_hash=contract_hash
@@ -361,6 +367,14 @@ def update_booking_status_view(request, pk):
         booking.escrow_status = 'Refunded' # Refunded to Farmer
         
     booking.save()
+
+    # If approved and operator requested, auto-dispatch to matching operators
+    if new_status == 'Approved' and booking.requires_operator and not booking.operator_assigned:
+        try:
+            from .operator_views import dispatch_booking_to_matching_operators
+            dispatch_booking_to_matching_operators(booking)
+        except Exception as e:
+            print("Operator dispatch error:", e)
     
     # If completed, set equipment availability back to true
     if new_status == 'Completed':

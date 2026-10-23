@@ -556,3 +556,44 @@ def seed_db():
 
 if __name__ == '__main__':
     seed_db()
+
+    # 9. Create Operator User & Profile
+    operator_user, created = User.objects.get_or_create(
+        username='operator',
+        defaults={
+            'email': 'operator@agrirent.com',
+            'role': 'Operator',
+            'phone_number': '+919876543213',
+            'is_verified': True,
+            'reliability_score': 4.9,
+            'aadhaar_kyc_status': 'Verified',
+            'aadhaar_number_masked': 'XXXX-XXXX-8899'
+        }
+    )
+    if created:
+        operator_user.set_password('password123')
+        operator_user.save()
+
+    from api.models import OperatorProfile, OperatorJobAssignment, JobStatusHistory
+    op_profile, _ = OperatorProfile.objects.get_or_create(
+        user=operator_user,
+        defaults={
+            'full_name': 'Ramesh Kumar',
+            'phone': '+919876543213',
+            'experience_years': 6,
+            'skills': ['Tractor Operation', 'Harvester Operation', 'Rotary Tillage', 'Paddy Puddling'],
+            'supported_machinery': ['Tractor', 'Harvester', 'Rotavator', 'Seeder', 'Sprayer'],
+            'service_area': 'Coimbatore & Tiruppur Rural',
+            'service_radius_km': 35.0,
+            'current_latitude': 11.0250,
+            'current_longitude': 76.9620,
+            'working_hours': '06:00 AM - 07:30 PM',
+            'is_available': True,
+            'current_work_status': 'Available',
+            'verification_status': 'Verified',
+            'license_number': 'DL-TN-38-20180092',
+            'hourly_compensation_rate': 280.00,
+            'total_jobs_completed': 14
+        }
+    )
+    print("Created operator seed user and verified profile.")

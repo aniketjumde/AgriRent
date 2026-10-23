@@ -14,7 +14,7 @@ export default function SIHDemoButton() {
   const steps = [
     {
       title: "Welcome to AgriRent SIH Demo Mode ⚡",
-      desc: "This interactive wizard simulates a full transactional lifecycle of our farm machinery sharing platform. We will walkthrough: AI Recommendation ➔ Map Search ➔ Voice Booking ➔ Owner Approval ➔ Completion ➔ Admin Analytics.",
+      desc: "This interactive wizard simulates a full transactional lifecycle: Farmer Booking with Operator ➔ AI Operator Matching ➔ Operator Mission & GPS Navigation ➔ Owner Handover ➔ Farm Work & Completion ➔ Admin Audit.",
       actionText: "Initialize Demo Mode"
     },
     {
@@ -23,23 +23,23 @@ export default function SIHDemoButton() {
       actionText: "Run AI Advisor"
     },
     {
-      title: "Step 2: Voice Booking Prefill & Submission",
-      desc: "Simulating speech-to-text input. The NLP engine parses dates, category, and location from: 'Rent harvester tomorrow in Coimbatore for 3 days.' Total cost is computed and the contract booking is posted.",
-      actionText: "Simulate Voice Booking"
+      title: "Step 2: Voice Booking Prefill with Operator Assistance",
+      desc: "Simulating speech-to-text input. The NLP engine parses dates, category, and location. Booking is created with 'requires_operator: true'.",
+      actionText: "Simulate Voice & Operator Booking"
     },
     {
-      title: "Step 3: Owner Dashboard & Booking Approval",
-      desc: "Simulating a login as 'owner' to review the contract parameters. The owner approves the pending request and starts the rental timer once the harvester is dispatched.",
-      actionText: "Approve Booking & Start Rental"
+      title: "Step 3: Owner Approval & AI Operator Dispatch",
+      desc: "Simulating login as 'owner' to approve the booking. Approval automatically triggers AI matching to nearby verified operators and creates a field job offer.",
+      actionText: "Approve Booking & Trigger Operator Match"
     },
     {
-      title: "Step 4: Rental Completion & Earnings",
-      desc: "The rental period ends. The owner completes the contract. The harvester returns to 'Available' state, and the owner's revenue metrics and utilization rate update in real-time.",
-      actionText: "Complete Rental Contract"
+      title: "Step 4: Operator Dashboard & Live Mission Execution",
+      desc: "Simulating login as 'operator' (Ramesh Kumar). The operator accepts the job, tracks GPS route, confirms machine collection from Owner, transits to farm, and starts field work.",
+      actionText: "Switch to Operator & Execute Field Mission"
     },
     {
-      title: "Step 5: Admin Panel Audit & SVG Analytics Charts",
-      desc: "Simulating a login as 'admin'. The admin audits platform transactions, verified machinery lists, and checks the SVG charts displaying seasonal trends and revenue curves.",
+      title: "Step 5: Mission Completion & Admin Panel Audit",
+      desc: "Work is marked completed, releasing escrow payouts to both the Machine Owner and the Operator. Logging in as 'admin' to audit platform transactions and charts.",
       actionText: "Finish & View Admin Dashboard"
     }
   ];
@@ -96,15 +96,13 @@ export default function SIHDemoButton() {
             start_date: new Date(tomorrowStr).toISOString(),
             end_date: new Date(threeDaysAfterStr).toISOString(),
             delivery_option: 'Delivery',
+            requires_operator: true,
             notes: '[Voice Booking Input] Rent harvester tomorrow in Coimbatore for 3 days.'
           })
         });
 
         setDemoBookingId(booking.id);
-        
-        // Notify farmer dashboard that a new booking exists
         window.dispatchEvent(new CustomEvent('agrirent_new_booking_created'));
-        
         setCurrentStep(3);
       } 
       else if (currentStep === 3) {
@@ -112,27 +110,28 @@ export default function SIHDemoButton() {
         await logout();
         await login('owner', 'password123');
         
-        // If booking id is set, patch it to Approved then In Progress
+        // If booking id is set, approve booking (triggers AI operator dispatch)
         if (demoBookingId) {
           await apiFetch(`/api/bookings/${demoBookingId}/status/`, {
             method: 'PATCH',
             body: JSON.stringify({ status: 'Approved' })
-          });
-          await apiFetch(`/api/bookings/${demoBookingId}/status/`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status: 'In Progress' })
           });
         }
         
         setCurrentStep(4);
       } 
       else if (currentStep === 4) {
-        // Complete the rental
-        if (demoBookingId) {
-          await apiFetch(`/api/bookings/${demoBookingId}/status/`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status: 'Completed' })
-          });
+        // Switch to Operator and execute field job steps
+        await logout();
+        await login('operator', 'password123');
+        
+        const opDash = await apiFetch('/api/operator/dashboard/');
+        if (opDash.new_requests && opDash.new_requests.length > 0) {
+          const reqId = opDash.new_requests[0].id;
+          await apiFetch(`/api/operator/jobs/${reqId}/accept/`, { method: 'POST' });
+          await apiFetch(`/api/operator/jobs/${reqId}/status/`, { method: 'PATCH', body: JSON.stringify({ status: 'TRAVELLING_TO_PICKUP' }) });
+          await apiFetch(`/api/operator/jobs/${reqId}/status/`, { method: 'PATCH', body: JSON.stringify({ status: 'MACHINE_COLLECTED' }) });
+          await apiFetch(`/api/operator/jobs/${reqId}/status/`, { method: 'PATCH', body: JSON.stringify({ status: 'IN_PROGRESS' }) });
         }
         
         setCurrentStep(5);
@@ -220,9 +219,9 @@ export default function SIHDemoButton() {
               <div className="flex justify-between text-[8px] text-slate-500 font-extrabold mt-1.5 uppercase px-1">
                 <span>Start</span>
                 <span>AI Recommend</span>
-                <span>Voice Book</span>
-                <span>Approve</span>
-                <span>Complete</span>
+                <span>Voice & Op</span>
+                <span>Owner Match</span>
+                <span>Operator</span>
                 <span>Admin Charts</span>
               </div>
             </div>
