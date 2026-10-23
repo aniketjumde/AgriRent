@@ -1867,6 +1867,89 @@ const mockApiRouter = async (endpoint, options = {}) => {
     };
   }
 
+
+  // 27. Nearby Equipment Mock Handler
+  if (cleanEndpoint.startsWith('/api/equipment/nearby/') && method === 'GET') {
+    const urlObj = new URL('http://localhost' + endpoint);
+    const lat = parseFloat(urlObj.searchParams.get('lat') || 11.0168);
+    const lng = parseFloat(urlObj.searchParams.get('lng') || 76.9558);
+    const radius = parseFloat(urlObj.searchParams.get('radius') || 50);
+    const category = (urlObj.searchParams.get('category') || '').toLowerCase();
+    const search = (urlObj.searchParams.get('search') || '').toLowerCase();
+    const maxPrice = parseFloat(urlObj.searchParams.get('max_price') || 999999);
+    const avail = urlObj.searchParams.get('availability') || 'all';
+
+    let list = (db.equipment || []).map(eq => {
+      const eqLat = parseFloat(eq.location_latitude || 11.0168);
+      const eqLng = parseFloat(eq.location_longitude || 76.9558);
+      const dLat = (eqLat - lat) * Math.PI / 180;
+      const dLng = (eqLng - lng) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat*Math.PI/180) * Math.cos(eqLat*Math.PI/180) * Math.sin(dLng/2)**2;
+      const dist = Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 10) / 10;
+      return {
+        ...eq,
+        distance_km: dist,
+        rental_price_per_day: Math.round(parseFloat(eq.rental_price_per_hour || 1200) * 8),
+        effective_available: eq.is_available !== false,
+        delivery_charge_estimate: Math.max(150, Math.round(dist * 18))
+      };
+    });
+
+    if (radius) list = list.filter(e => e.distance_km <= radius);
+    if (category && category !== 'all') list = list.filter(e => (e.category || '').toLowerCase() === category);
+    if (search) list = list.filter(e => (e.title || '').toLowerCase().includes(search) || (e.description || '').toLowerCase().includes(search));
+    if (maxPrice) list = list.filter(e => parseFloat(e.rental_price_per_hour || 0) <= maxPrice);
+    if (avail === 'available') list = list.filter(e => e.effective_available);
+    if (avail === 'busy') list = list.filter(e => !e.effective_available);
+
+    return {
+      farmer_location: { latitude: lat, longitude: lng, radius_km: radius },
+      total_found: list.length,
+      results: list
+    };
+  }
+
+  // 28. Validate Cart Booking Mock Handler
+  if (cleanEndpoint === '/api/cart/validate/' && method === 'POST') {
+    const items = body.items || (body.equipment_id ? [body] : []);
+    let totalCart = 0;
+    const validated = items.map(item => {
+      const eq = (db.equipment || []).find(e => e.id === (item.equipment_id || item.equipment)) || {};
+      const hourly = parseFloat(eq.rental_price_per_hour || item.hourly_rate || 1200);
+      const daily = hourly * 8;
+      const isDaily = item.rental_type === 'daily';
+      const dur = parseFloat(item.duration || 4);
+      const rentalBase = isDaily ? (daily * dur) : (hourly * dur);
+      const opCharge = item.requires_operator ? (350 * Math.max(1, Math.ceil(dur / (isDaily ? 1 : 8)))) : 0;
+      const delCharge = item.delivery_option === 'Delivery' ? (item.delivery_charge || 500) : 0;
+      const insCharge = item.insurance_opt_in ? (150 * Math.max(1, Math.ceil(dur / (isDaily ? 1 : 24)))) : 0;
+      const gst = Math.round((rentalBase + opCharge + delCharge + insCharge) * 0.05);
+      const itemTot = rentalBase + opCharge + delCharge + insCharge + gst;
+      totalCart += itemTot;
+
+      return {
+        ...item,
+        equipment_title: eq.title || item.equipment_title,
+        equipment_category: eq.category || item.equipment_category,
+        rental_base_amount: rentalBase,
+        operator_charge: opCharge,
+        delivery_charge: delCharge,
+        insurance_charge: insCharge,
+        gst_tax: gst,
+        item_total: itemTot,
+        is_available: true
+      };
+    });
+
+    return {
+      valid: true,
+      items: validated,
+      total_cart_amount: totalCart,
+      currency: "INR",
+      has_conflicts: false
+    };
+  }
+
   throw new Error(`Endpoint mock handler not found for: ${method} ${endpoint}`);
 };
 

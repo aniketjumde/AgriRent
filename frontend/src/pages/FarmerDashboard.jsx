@@ -4,6 +4,8 @@ import { Search, Filter, Compass, Tractor, Bot, HelpCircle, MessageCircle, Mic, 
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import MapComponent from '../components/MapComponent';
+import SmartBookingCart from '../components/SmartBookingCart';
+import EquipmentDetailDrawer from '../components/EquipmentDetailDrawer';
 import VoiceBookingModal from '../components/VoiceBookingModal';
 
 const getFallbackImage = (category) => {
@@ -88,6 +90,34 @@ export default function FarmerDashboard() {
   const [insuranceOptIn, setInsuranceOptIn] = useState(false);
   const [requiresOperator, setRequiresOperator] = useState(false);
   const [paymentsList, setPaymentsList] = useState([]);
+  
+  // GPS & Nearby Machinery State
+  const [farmerLocation, setFarmerLocation] = useState({
+    latitude: 11.0168,
+    longitude: 76.9558,
+    address: "Coimbatore Agri Cluster, Tamil Nadu"
+  });
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsError, setGpsError] = useState(null);
+  const [searchRadiusKm, setSearchRadiusKm] = useState(25);
+  const [availabilityFilter, setAvailabilityFilter] = useState('all'); // all, available, busy
+  const [sortByFilter, setSortByFilter] = useState('distance'); // distance, price_low, price_high, rating
+  const [nearbyListings, setNearbyListings] = useState([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [viewModeMobile, setViewModeMobile] = useState('both'); // 'map', 'list', 'both'
+
+  // Smart Booking Cart State (persisted in localStorage)
+  const [cartItems, setCartItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem('agrirent_smart_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [validatingCart, setValidatingCart] = useState(false);
+  const [drawerEquipment, setDrawerEquipment] = useState(null);
   const [paymentLoadingId, setPaymentLoadingId] = useState(null);
   const [paymentReceiptModal, setPaymentReceiptModal] = useState(null);
   const [notes, setNotes] = useState('');
@@ -224,6 +254,172 @@ export default function FarmerDashboard() {
     setSelectedDetailListing(null);
     navigate('/dashboard');
     alert(`Applied recommended category filter: "${rec.category}"`);
+  };
+
+
+  // Save cart changes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('agrirent_smart_cart', JSON.stringify(cartItems));
+    } catch (e) {
+      console.warn("Could not save cart to storage:", e);
+    }
+  }, [cartItems]);
+
+  // Request Browser GPS
+  const requestBrowserGps = () => {
+    if (!navigator.geolocation) {
+      setGpsError("Geolocation is not supported by your browser.");
+      return;
+    }
+    setGpsLoading(true);
+    setGpsError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = parseFloat(pos.coords.latitude.toFixed(6));
+        const lng = parseFloat(pos.coords.longitude.toFixed(6));
+        setFarmerLocation({
+          latitude: lat,
+          longitude: lng,
+          address: `GPS Pin: ${lat}, ${lng}`
+        });
+        setGpsLoading(false);
+      },
+      (err) => {
+        setGpsLoading(false);
+        setGpsError("Location permission denied or unavailable. Using manual farm service location.");
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
+  // Fetch Nearby Equipment from backend
+  const fetchNearbyEquipment = async (loc = farmerLocation, radius = searchRadiusKm, cat = categoryFilter, maxP = maxPriceFilter, avail = availabilityFilter, sort = sortByFilter) => {
+    setNearbyLoading(true);
+    try {
+      const params = new URLSearchParams({
+        lat: loc.latitude,
+        lng: loc.longitude,
+        radius: radius,
+        category: cat || '',
+        max_price: maxP || '',
+        availability: avail || 'all',
+        sort_by: sort || 'distance'
+      });
+      const data = await apiFetch(`/api/equipment/nearby/?${params.toString()}`);
+      if (data && data.results) {
+        setNearbyListings(data.results);
+      }
+    } catch (e) {
+      console.warn("Failed fetching nearby equipment:", e);
+    } finally {
+      setNearbyLoading(false);
+    }
+  };
+
+  // Trigger nearby fetch whenever filters or location change
+  useEffect(() => {
+    fetchNearbyEquipment(farmerLocation, searchRadiusKm, categoryFilter, maxPriceFilter, availabilityFilter, sortByFilter);
+  }, [farmerLocation.latitude, farmerLocation.longitude, searchRadiusKm, categoryFilter, maxPriceFilter, availabilityFilter, sortByFilter]);
+
+  // Initial GPS prompt
+  useEffect(() => {
+    requestBrowserGps();
+  }, []);
+
+  // Cart operations
+  const handleAddToCart = (item) => {
+    setCartItems(prev => {
+      // Check if item already exists
+      const exists = prev.findIndex(i => i.equipment_id === item.equipment_id);
+      if (exists >= 0) {
+        const updated = [...prev];
+        updated[exists] = item;
+        return updated;
+      }
+      return [...prev, item];
+    });
+    setDrawerEquipment(null);
+    setIsCartOpen(true);
+  };
+
+  const handleUpdateCartItem = (itemId, updatedData) => {
+    setCartItems(prev => prev.map(i => i.id === itemId ? { ...i, ...updatedData } : i));
+  };
+
+  const handleRemoveCartItem = (itemId) => {
+    setCartItems(prev => prev.filter(i => i.id !== itemId));
+  };
+
+  const handleClearCart = () => {
+    if (window.confirm("Are you sure you want to clear your agricultural booking cart?")) {
+      setCartItems([]);
+    }
+  };
+
+  const handleValidateCart = async () => {
+    if (cartItems.length === 0) return;
+    setValidatingCart(true);
+    try {
+      const res = await apiFetch('/api/cart/validate/', {
+        method: 'POST',
+        body: JSON.stringify({
+          farmer_lat: farmerLocation.latitude,
+          farmer_lng: farmerLocation.longitude,
+          items: cartItems
+        })
+      });
+
+      if (res && res.items) {
+        setCartItems(res.items.map((vi, idx) => ({
+          ...cartItems[idx],
+          ...vi,
+          conflict_warning: vi.conflict_warning
+        })));
+        if (!res.valid) {
+          alert("Some items in your cart have schedule conflicts. Please review alerts.");
+        } else {
+          alert("All cart equipment rates and slot availability verified successfully!");
+        }
+      }
+    } catch (e) {
+      alert("Cart validation error: " + e.message);
+    } finally {
+      setValidatingCart(false);
+    }
+  };
+
+  const handleProceedCartCheckout = async () => {
+    if (cartItems.length === 0) return;
+    setValidatingCart(true);
+    try {
+      // Create confirmed bookings for each item in the cart
+      for (const item of cartItems) {
+        await apiFetch('/api/bookings/', {
+          method: 'POST',
+          body: JSON.stringify({
+            equipment: item.equipment_id,
+            start_date: item.start_date,
+            end_date: item.end_date,
+            delivery_option: item.delivery_option || 'Pickup',
+            requires_operator: !!item.requires_operator,
+            insurance_opt_in: !!item.insurance_opt_in,
+            notes: `Operation: ${item.farming_operation || 'Fieldwork'}, Acreage: ${item.acreage || 2} acres`
+          })
+        });
+      }
+
+      alert("Equipment booking requests successfully submitted! Redirecting to payment & tracking...");
+      setCartItems([]);
+      setIsCartOpen(false);
+      setActiveSubTab('my-bookings');
+      navigate('/dashboard/my-bookings');
+      loadDashboardData();
+    } catch (e) {
+      alert("Checkout booking error: " + e.message);
+    } finally {
+      setValidatingCart(false);
+    }
   };
 
   const loadPayments = async () => {
@@ -570,7 +766,8 @@ export default function FarmerDashboard() {
     }
   };
 
-  const filteredListings = listings.filter(item => {
+  const displaySourceList = nearbyListings.length > 0 ? nearbyListings : listings;
+  const filteredListings = displaySourceList.filter(item => {
     const term = searchTerm.toLowerCase();
     const matchesSearch = 
       item.title.toLowerCase().includes(term) || 
@@ -665,6 +862,19 @@ export default function FarmerDashboard() {
             }`}
           >
             Payments & Receipts
+          </button>
+
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="relative flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md text-xs transition-all"
+          >
+            <ShoppingBag className="w-4 h-4" />
+            <span>Booking Cart</span>
+            {cartItems.length > 0 && (
+              <span className="ml-1 w-5 h-5 bg-amber-400 text-slate-900 rounded-full text-[10px] font-black flex items-center justify-center animate-bounce">
+                {cartItems.length}
+              </span>
+            )}
           </button>
           
           <button
@@ -879,39 +1089,116 @@ export default function FarmerDashboard() {
 
             </div>
 
-            {/* Maps panel */}
-            <div className="lg:col-span-8 h-[380px] min-h-[350px]">
-              <MapComponent
-                listings={listings}
-                userLocation={{ latitude: 11.0168, longitude: 76.9558 }}
-                onBookClick={(item) => setSelectedDetailListing(item)}
-              />
+            {/* Live Interactive Agricultural Map & Controls */}
+            <div className="lg:col-span-8 flex flex-col h-[460px] min-h-[420px] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+              {/* Map Bar: GPS Status, Radius Selector & Location Coordinate */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={requestBrowserGps}
+                    disabled={gpsLoading}
+                    className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg font-bold flex items-center gap-1.5 shadow-xs transition-all"
+                    title="Detect current GPS location"
+                  >
+                    <MapPin className={`w-3.5 h-3.5 ${gpsLoading ? 'animate-bounce' : ''}`} />
+                    <span>{gpsLoading ? 'Detecting GPS...' : 'My GPS Location'}</span>
+                  </button>
+
+                  <div className="text-[11px] text-slate-500 font-medium hidden sm:flex items-center gap-1">
+                    <span>Farm Point:</span>
+                    <strong className="text-slate-800 dark:text-slate-200 font-mono">
+                      {farmerLocation.latitude.toFixed(4)}, {farmerLocation.longitude.toFixed(4)}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Radius Buttons */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase hidden md:inline">Radius:</span>
+                  {[5, 10, 25, 50].map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setSearchRadiusKm(r)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
+                        searchRadiusKm === r
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-350 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      {r} km
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* GPS warning / Info pill */}
+              {gpsError && (
+                <div className="px-3 py-1.5 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 text-[11px] border-b border-amber-100 dark:border-amber-900 flex items-center justify-between">
+                  <span>{gpsError}</span>
+                  <button onClick={() => setGpsError(null)} className="font-bold underline text-[10px]">Dismiss</button>
+                </div>
+              )}
+
+              {/* Leaflet Live Map */}
+              <div className="flex-1 relative">
+                <MapComponent
+                  listings={nearbyListings.length > 0 ? nearbyListings : listings}
+                  userLocation={farmerLocation}
+                  radiusKm={searchRadiusKm}
+                  onLocationChange={(newLoc) => setFarmerLocation(prev => ({ ...prev, ...newLoc }))}
+                  onMarkerSelect={(item) => setDrawerEquipment(item)}
+                  onBookClick={(item) => setDrawerEquipment(item)}
+                />
+              </div>
             </div>
           </div>
 
           {/* Catalog listings filter bar */}
           <div className="space-y-4">
-            <div className="glass p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap gap-4 items-center justify-between">
-              <div className="flex-1 min-w-[250px] relative">
+            <div className="glass p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap gap-3 items-center justify-between">
+              <div className="flex-1 min-w-[220px] relative">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder={t('searchPlaceholder')}
-                  className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                  className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
                 />
               </div>
 
-              <div className="flex flex-wrap gap-1.5">
-                {['', 'Tractor', 'Harvester', 'Rotavator', 'Seeder', 'Sprayer', 'Crop Protection Equipment'].map(cat => (
+              {/* Availability Filter */}
+              <select
+                value={availabilityFilter}
+                onChange={(e) => setAvailabilityFilter(e.target.value)}
+                className="px-3 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
+              >
+                <option value="all">Availability: All</option>
+                <option value="available">Only Available</option>
+                <option value="busy">Reserved / Busy</option>
+              </select>
+
+              {/* Sort By Filter */}
+              <select
+                value={sortByFilter}
+                onChange={(e) => setSortByFilter(e.target.value)}
+                className="px-3 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
+              >
+                <option value="distance">Sort: Nearest Distance</option>
+                <option value="price_low">Sort: Price Low to High</option>
+                <option value="price_high">Sort: Price High to Low</option>
+                <option value="rating">Sort: Top Rated</option>
+              </select>
+
+              <div className="flex flex-wrap gap-1.5 w-full pt-1">
+                {['', 'Tractor', 'Harvester', 'Rotavator', 'Cultivator', 'Plough', 'Seed Drill', 'Sprayer', 'Crop Protection Equipment'].map(cat => (
                   <button
                     key={cat}
                     onClick={() => setCategoryFilter(cat)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                       categoryFilter === cat
-                        ? 'bg-emerald-600 border-emerald-600 text-white'
-                        : 'bg-white dark:bg-slate-850 border-slate-250 dark:border-slate-700 text-slate-600 dark:text-slate-350'
+                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                        : 'bg-white dark:bg-slate-850 border-slate-250 dark:border-slate-700 text-slate-600 dark:text-slate-350 hover:bg-slate-50'
                     }`}
                   >
                     {cat || t('all')}
@@ -1005,27 +1292,26 @@ export default function FarmerDashboard() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedDetailListing(item);
+                          setDrawerEquipment(item);
                         }}
                         className="px-2.5 py-2 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all"
                       >
-                        Details
+                        Details & Rates
                       </button>
                       <button
-                        disabled={!item.is_available}
+                        disabled={item.effective_available === false || item.is_available === false}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (item.is_available) {
-                            setBookingListing(item);
-                          }
+                          setDrawerEquipment(item);
                         }}
-                        className={`px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
-                          item.is_available
+                        className={`px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 ${
+                          (item.effective_available ?? item.is_available)
                             ? 'bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white hover:scale-105'
                             : 'bg-slate-100 dark:bg-slate-850 text-slate-400 dark:text-slate-600 cursor-not-allowed'
                         }`}
                       >
-                        Book Now
+                        <ShoppingBag className="w-3.5 h-3.5" />
+                        <span>Book Machine</span>
                       </button>
                     </div>
                   </div>
@@ -1921,6 +2207,39 @@ export default function FarmerDashboard() {
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Equipment Detail & Smart Configurator Drawer */}
+      {drawerEquipment && (
+        <EquipmentDetailDrawer
+          equipment={drawerEquipment}
+          userLocation={farmerLocation}
+          onClose={() => setDrawerEquipment(null)}
+          onAddToCart={handleAddToCart}
+        />
+      )}
+
+      {/* Smart Agricultural Booking Cart Slide-Over / Modal */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs p-0 sm:p-4 animate-fade-in">
+          <div className="w-full max-w-2xl h-full flex flex-col relative animate-slide-left">
+            <button
+              onClick={() => setIsCartOpen(false)}
+              className="absolute top-4 right-4 z-10 p-2 text-white/80 hover:text-white bg-black/20 hover:bg-black/40 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <SmartBookingCart
+              cartItems={cartItems}
+              onUpdateItem={handleUpdateCartItem}
+              onRemoveItem={handleRemoveCartItem}
+              onClearCart={handleClearCart}
+              onProceedToCheckout={handleProceedCartCheckout}
+              onValidateCart={handleValidateCart}
+              validating={validatingCart}
+            />
           </div>
         </div>
       )}
