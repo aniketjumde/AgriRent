@@ -5,4 +5,9 @@ django-cors-headers>=4.3.0
 numpy>=1.24.0
 pandas>=2.0.0
 scikit-learn>=1.2.0
+<<<<<<< HEAD
 psycopg2-binary
+=======
+razorpay>=2.0.1
+requests>=2.31.0
+>>>>>>> 40cd714a34fa8be06451b799bc65f8d8b09df20a
