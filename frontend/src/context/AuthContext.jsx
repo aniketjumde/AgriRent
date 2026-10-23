@@ -1432,26 +1432,39 @@ const mockApiRouter = async (endpoint, options = {}) => {
     const allJobs = db.operator_assignments.filter(j => j.operator === profile.id || j.operator_username === (currentUser?.username || 'operator'));
     const newRequests = allJobs.filter(j => j.status === 'REQUESTED');
     const activeJobs = allJobs.filter(j => ['ACCEPTED', 'TRAVELLING_TO_PICKUP', 'ARRIVED_AT_PICKUP', 'MACHINE_COLLECTED', 'TRAVELLING_TO_FARM', 'ARRIVED_AT_FARM', 'IN_PROGRESS'].includes(j.status));
+    const upcomingJobs = allJobs.filter(j => j.status === 'ACCEPTED');
     const completedJobs = allJobs.filter(j => j.status === 'COMPLETED');
     const historyJobs = allJobs.filter(j => ['COMPLETED', 'REJECTED', 'CANCELLED'].includes(j.status));
 
     const totalEarnings = completedJobs.reduce((acc, curr) => acc + (parseFloat(curr.compensation_amount) || 0), 0);
+    const pendingEarnings = activeJobs.reduce((acc, curr) => acc + (parseFloat(curr.compensation_amount) || 0), 0);
+
+    const userNotifs = (db.notifications || []).filter(n => n.user === (currentUser?.id || 4));
 
     return {
       profile,
       summary: {
-        total_jobs_completed: completedJobs.length + profile.total_jobs_completed,
+        total_jobs_completed: completedJobs.length + (profile.total_jobs_completed || 14),
         active_jobs_count: activeJobs.length,
+        upcoming_jobs_count: upcomingJobs.length,
         pending_requests_count: newRequests.length,
         total_earnings: totalEarnings > 0 ? totalEarnings : 3920.00,
+        pending_earnings: pendingEarnings,
+        acceptance_rate: 96.5,
+        completion_rate: 100.0,
+        total_hours_worked: 78.0,
+        total_distance_covered: 142.5,
         rating: profile.reliability_score || 4.9,
         verification_status: profile.verification_status,
-        is_available: profile.is_available
+        is_available: profile.is_available,
+        current_work_status: profile.current_work_status
       },
       new_requests: newRequests,
       active_jobs: activeJobs,
+      upcoming_jobs: upcomingJobs,
       completed_jobs: completedJobs,
       history_jobs: historyJobs,
+      notifications: userNotifs,
       nearby_available_jobs: [
         {
           booking_id: 101,
