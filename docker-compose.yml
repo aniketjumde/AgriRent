@@ -11,7 +11,7 @@ services:
       - POSTGRES_USER=agrirent_user
       - POSTGRES_PASSWORD=agrirent_pass
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U agrirent_user -d agrirent"]
       interval: 5s
