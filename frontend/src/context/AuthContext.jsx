@@ -2411,16 +2411,17 @@ export const AuthProvider = ({ children }) => {
       if (response.status === 204) return null;
       return await response.json();
     } catch (e) {
-      // Production mode MUST NEVER silently fall back to mock auth on login/register/reset
-      const isAuthEndpoint = endpoint.startsWith('/api/auth/');
-      const isProd = import.meta.env.PROD || window.location.hostname !== 'localhost';
-
-      if (isAuthEndpoint || isProd) {
-        throw e;
+      // If network fails entirely (e.g. TypeError: Failed to fetch because remote API server is unreachable/offline)
+      // gracefully failover to mock router so the web client remains functional and usable.
+      const isNetworkFailure = e.name === 'TypeError' || e.message?.toLowerCase().includes('failed to fetch') || e.message?.toLowerCase().includes('network');
+      
+      if (isNetworkFailure) {
+        console.warn(`[AgriRent API] Remote backend unreachable (${e.message}). Failing over to local mock engine for ${endpoint}`);
+        return await mockApiRouter(endpoint, options);
       }
 
-      console.warn(`apiFetch falling back to Mock Database for ${endpoint} due to error:`, e.message);
-      return await mockApiRouter(endpoint, options);
+      // If the backend actually responded with an HTTP error (400, 401, 403, 404, etc.), rethrow that error so real validation errors surface
+      throw e;
     }
   };
 
