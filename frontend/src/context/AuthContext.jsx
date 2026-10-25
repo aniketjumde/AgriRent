@@ -38,21 +38,22 @@ const removeSafeStorageItem = (key) => {
 // --- CLIENT-SIDE MOCK DATABASE FAILOVER ---
 
 const getMockDB = () => {
+  let db = null;
   try {
     const dbStr = localStorage.getItem('agrirent_mock_db');
     if (dbStr) {
-      return JSON.parse(dbStr);
+      db = JSON.parse(dbStr);
     }
   } catch (e) {
     console.error("Failed to read mock db:", e);
   }
 
-  // Generate 20 Farmers
+  // Generate default mock users if not present
   const mockUsers = [
-    { id: 1, username: 'farmer', role: 'Farmer', email: 'farmer@agrirent.com', phone_number: '+919876543211', is_verified: true, otp_code: '123456', password: 'password123' },
-    { id: 2, username: 'owner', role: 'Owner', email: 'owner@agrirent.com', phone_number: '+919876543212', is_verified: true, otp_code: '123456', password: 'password123' },
-    { id: 3, username: 'admin', role: 'Admin', email: 'admin@agrirent.com', phone_number: '+919876543210', is_verified: true, otp_code: '123456', password: 'password123' },
-    { id: 4, username: 'operator', role: 'Operator', email: 'operator@agrirent.com', phone_number: '+919876543213', is_verified: true, otp_code: '123456', password: 'password123' },
+    { id: 1, username: 'farmer', role: 'Farmer', email: 'farmer@agrirent.com', phone_number: '+919876543211', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 2, username: 'owner', role: 'Owner', email: 'owner@agrirent.com', phone_number: '+919876543212', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 3, username: 'admin', role: 'Admin', email: 'admin@agrirent.com', phone_number: '+919876543210', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 4, username: 'operator', role: 'Operator', email: 'operator@agrirent.com', phone_number: '+919876543213', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
   ];
 
   for (let i = 1; i <= 20; i++) {
@@ -64,7 +65,7 @@ const getMockDB = () => {
       phone_number: `+9198765432${10 + i}`,
       is_verified: true,
       otp_code: '123456',
-      password: 'password123'
+      password: 'Demo@AgriRent2026'
     });
   }
 
@@ -109,6 +110,35 @@ const getMockDB = () => {
       mockUsers.push(acc);
     }
   });
+
+  if (db && db.users && Array.isArray(db.users)) {
+    // Synchronize passwords and demo accounts in existing localStorage DB
+    puneDemoAccounts.forEach(acc => {
+      const existing = db.users.find(u => (u.email && u.email.toLowerCase() === acc.email.toLowerCase()) || u.username === acc.username);
+      if (existing) {
+        existing.password = acc.password;
+        existing.is_verified = true;
+        existing.is_email_verified = true;
+      } else {
+        db.users.push(acc);
+      }
+    });
+
+    ['farmer@agrirent.com', 'owner@agrirent.com', 'admin@agrirent.com', 'operator@agrirent.com'].forEach(email => {
+      const existing = db.users.find(u => u.email === email);
+      if (existing) {
+        existing.password = 'Demo@AgriRent2026';
+        existing.is_verified = true;
+      }
+    });
+
+    try {
+      localStorage.setItem('agrirent_mock_db', JSON.stringify(db));
+    } catch (e) {
+      console.warn("Storage writing restricted:", e);
+    }
+    return db;
+  }
 
   const categories = ['Tractor', 'Harvester', 'Rotavator', 'Seeder', 'Sprayer', 'Crop Protection Equipment'];
   const titles = {
