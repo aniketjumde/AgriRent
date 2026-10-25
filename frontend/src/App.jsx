@@ -15,7 +15,6 @@ import OperatorDashboard from './pages/OperatorDashboard';
 import SupportCenter from './pages/SupportCenter';
 
 import AIChatBot from './components/AIChatBot';
-import SIHDemoButton from './components/SIHDemoButton';
 import { Tractor, LogOut, Globe, Sun, Moon, HelpCircle, LayoutDashboard, UserCheck } from 'lucide-react';
 
 function AppContent() {
@@ -210,9 +209,6 @@ function AppContent() {
 
       {/* Floating Chatbot Assistant */}
       <AIChatBot />
-
-      {/* Floating SIH Demo Controller */}
-      <SIHDemoButton />
 
     </div>
   );

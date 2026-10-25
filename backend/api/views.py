@@ -1,12 +1,13 @@
 from rest_framework import status, permissions
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from django.db.models import Sum, Count, Avg
+from django.contrib.auth.password_validation import validate_password
+from django.db.models import Sum, Count, Avg, Q
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from .models import User, Equipment, Booking, Review, Message, Notification, SupportTicket, PricePrediction, Recommendation
 from .serializers import (
@@ -19,65 +20,162 @@ from ai.recommendation import train_and_recommend
 from ai.price_predictor import predict_price
 from ai.voice_parser import parse_voice_text
 from ai.assistant import query_assistant
+from .auth_utils import (
+    generate_secure_token, hash_token, send_verification_email, send_password_reset_email
+)
+from rest_framework.throttling import ScopedRateThrottle
+from rest_framework_simplejwt.tokens import RefreshToken, OutstandingToken, BlacklistedToken
 
 # --- AUTHENTICATION VIEWS ---
 
+class AuthRegisterThrottle(ScopedRateThrottle):
+    scope = 'auth_register'
+
+class AuthLoginThrottle(ScopedRateThrottle):
+    scope = 'auth_login'
+
+class AuthResetThrottle(ScopedRateThrottle):
+    scope = 'auth_reset'
+
+class AuthVerifyThrottle(ScopedRateThrottle):
+    scope = 'auth_verify'
+
+
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([AuthRegisterThrottle])
 def register_view(request):
+    """
+    Secure registration:
+    - Normalizes and validates unique email
+    - Minimum 12 character password policy via UserSerializer
+    - Generates cryptographically secure expiring verification token
+    - Sends verification email (never returns tokens/secrets in response)
+    """
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
-        # Log simulated OTP code
-        print(f"==================================================")
-        print(f"SIMULATED OTP DISPATCH for {user.username} ({user.phone_number}): CODE is '123456'")
-        print(f"==================================================")
+        
+        raw_token = generate_secure_token()
+        user.email_verification_token = hash_token(raw_token)
+        user.email_verification_sent_at = timezone.now()
+        user.otp_code = None  # Remove any insecure hardcoded OTP
+        user.save()
+
+        try:
+            send_verification_email(user, raw_token)
+        except Exception:
+            pass  # Handled safely
+
         return Response({
-            "message": "User registered successfully. Please verify your OTP.",
+            "message": "User registered successfully. A verification link has been sent to your email.",
             "username": user.username,
-            "otp_sent_to": user.phone_number or user.email
+            "email": user.email,
+            "is_email_verified": False
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
-def verify_otp_view(request):
-    username = request.data.get('username')
-    otp_code = request.data.get('otp_code')
+@throttle_classes([AuthVerifyThrottle])
+def verify_email_view(request):
+    """
+    Secure Email Verification:
+    - Accepts token & email OR verification code
+    - Validates token hash and 24-hour expiration
+    - Rejects universal bypasses (e.g. '123456')
+    - One-time use: clears verification token upon success
+    """
+    token_str = (request.data.get('token') or request.data.get('otp_code') or '').strip()
+    email_or_username = (request.data.get('email') or request.data.get('username') or '').strip()
 
-    try:
-        user = User.objects.get(username=username)
-        if otp_code == '123456' or user.otp_code == otp_code:
-            user.is_verified = True
-            user.save()
-            
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                "message": "OTP verified successfully. User is now active.",
-                "token": {
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token)
-                },
-                "user": UserProfileSerializer(user).data
-            }, status=status.HTTP_200_OK)
-        return Response({"error": "Invalid OTP code."}, status=status.HTTP_400_BAD_REQUEST)
-    except User.DoesNotExist:
-        return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+    if not token_str or not email_or_username:
+        return Response({"error": "Both email and verification token are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Universal bypass rejection
+    if token_str in ['123456', '000000', '111111']:
+        return Response({"error": "Invalid or expired verification token."}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.filter(
+        Q(email__iexact=email_or_username) | Q(username__iexact=email_or_username)
+    ).first()
+
+    if not user:
+        return Response({"error": "Invalid or expired verification token."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Verify token
+    hashed_input = hash_token(token_str)
+    if not user.email_verification_token or user.email_verification_token != hashed_input:
+        return Response({"error": "Invalid or expired verification token."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Check 24-hour expiration
+    if user.email_verification_sent_at and (timezone.now() - user.email_verification_sent_at) > timedelta(hours=24):
+        return Response({"error": "Verification token has expired. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Mark verified & invalidate token (one-time use)
+    user.is_email_verified = True
+    user.is_verified = True
+    user.email_verification_token = None
+    user.email_verification_sent_at = None
+    user.save()
+
+    refresh = RefreshToken.for_user(user)
+    return Response({
+        "message": "Email verified successfully. Welcome to AgriRent!",
+        "token": {
+            "refresh": str(refresh),
+            "access": str(refresh.access_token)
+        },
+        "user": UserProfileSerializer(user).data
+    }, status=status.HTTP_200_OK)
+
+
+# Backward-compatible alias
+verify_otp_view = verify_email_view
 
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([AuthLoginThrottle])
 def login_view(request):
+    """
+    Secure Login:
+    - Accepts email (preferred) or username with password
+    - Authenticates via custom EmailOrUsernameBackend
+    - Enforces is_active and is_verified / is_email_verified checks
+    - Issues SimpleJWT access (15 min) and refresh (7 days) tokens
+    """
+    email = request.data.get('email')
     username = request.data.get('username')
     password = request.data.get('password')
     
-    user = authenticate(username=username, password=password)
+    identifier = (email or username or '').strip()
+    if not identifier or not password:
+        return Response({"error": "Email/Username and password are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Check if user exists and is inactive to provide informative response
+    inactive_user = User.objects.filter(
+        Q(email__iexact=identifier) | Q(username__iexact=identifier)
+    ).first()
+    if inactive_user and not inactive_user.is_active and inactive_user.check_password(password):
+        return Response({"error": "This account is inactive. Please contact support."}, status=status.HTTP_403_FORBIDDEN)
+
+    user = authenticate(request=request, email=identifier, password=password)
+    if not user:
+        # Fallback query with username argument for standard Django ModelBackend
+        user = authenticate(request=request, username=identifier, password=password)
+
     if user:
-        if not user.is_verified:
+        if not user.is_active:
+            return Response({"error": "This account is inactive. Please contact support."}, status=status.HTTP_403_FORBIDDEN)
+
+        if not (user.is_email_verified or user.is_verified):
             return Response({
-                "error": "Account not verified.",
+                "error": "Account email is not verified. Please verify your email before logging in.",
                 "is_verified": False,
+                "is_email_verified": False,
+                "email": user.email,
                 "username": user.username
             }, status=status.HTTP_403_FORBIDDEN)
             
@@ -89,42 +187,123 @@ def login_view(request):
             },
             "user": UserProfileSerializer(user).data
         }, status=status.HTTP_200_OK)
-    return Response({"error": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    return Response({"error": "Invalid email or password."}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([AuthResetThrottle])
 def forgot_password_view(request):
-    username = request.data.get('username')
-    try:
-        user = User.objects.get(username=username)
-        user.otp_code = "123456" # Dev OTP code
-        user.save()
-        print(f"==================================================")
-        print(f"RESET OTP DISPATCH for {user.username}: CODE is '123456'")
-        print(f"==================================================")
-        return Response({"message": "Password reset OTP sent to registered number."}, status=status.HTTP_200_OK)
-    except User.DoesNotExist:
-        return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+    """
+    Secure Forgot Password:
+    - Accepts email (or username)
+    - Always returns generic success response to prevent account enumeration
+    - Dispatches single-use expiring token via email
+    """
+    email_or_user = (request.data.get('email') or request.data.get('username') or '').strip()
+    if email_or_user:
+        user = User.objects.filter(
+            Q(email__iexact=email_or_user) | Q(username__iexact=email_or_user)
+        ).first()
+
+        if user:
+            raw_token = generate_secure_token()
+            user.password_reset_token = hash_token(raw_token)
+            user.password_reset_sent_at = timezone.now()
+            user.otp_code = None
+            user.save()
+
+            try:
+                send_password_reset_email(user, raw_token)
+            except Exception:
+                pass
+
+    return Response({
+        "message": "If an account with that email exists, password reset instructions have been sent."
+    }, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([AuthResetThrottle])
 def reset_password_view(request):
-    username = request.data.get('username')
-    otp_code = request.data.get('otp_code')
+    """
+    Secure Password Reset:
+    - Validates token against SHA-256 hash
+    - Enforces 1-hour expiration
+    - Validates new password with Django password validators (min 12 chars)
+    - Invalidates token after use
+    - Blacklists existing outstanding refresh tokens for the user
+    """
+    email_or_user = (request.data.get('email') or request.data.get('username') or '').strip()
+    token_str = (request.data.get('token') or request.data.get('otp_code') or '').strip()
     new_password = request.data.get('new_password')
-    
+
+    if not email_or_user or not token_str or not new_password:
+        return Response({"error": "Email, reset token, and new password are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Universal bypass rejection
+    if token_str in ['123456', '000000', '111111']:
+        return Response({"error": "Invalid or expired reset token."}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.filter(
+        Q(email__iexact=email_or_user) | Q(username__iexact=email_or_user)
+    ).first()
+
+    if not user:
+        return Response({"error": "Invalid or expired reset token."}, status=status.HTTP_400_BAD_REQUEST)
+
+    hashed_input = hash_token(token_str)
+    if not user.password_reset_token or user.password_reset_token != hashed_input:
+        return Response({"error": "Invalid or expired reset token."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # 1-hour expiration check
+    if user.password_reset_sent_at and (timezone.now() - user.password_reset_sent_at) > timedelta(hours=1):
+        return Response({"error": "Reset token has expired. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Password policy validation
+    if len(new_password) < 12:
+        return Response({"error": "Password must be at least 12 characters long."}, status=status.HTTP_400_BAD_REQUEST)
     try:
-        user = User.objects.get(username=username)
-        if otp_code == '123456' or user.otp_code == otp_code:
-            user.set_password(new_password)
-            user.is_verified = True
-            user.save()
-            return Response({"message": "Password reset successfully. You can now login."}, status=status.HTTP_200_OK)
-        return Response({"error": "Invalid OTP code."}, status=status.HTTP_400_BAD_REQUEST)
-    except User.DoesNotExist:
-        return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        validate_password(new_password, user=user)
+    except Exception as e:
+        return Response({"error": list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Change password & invalidate token
+    user.set_password(new_password)
+    user.password_reset_token = None
+    user.password_reset_sent_at = None
+    user.save()
+
+    # Revoke existing refresh sessions
+    try:
+        tokens = OutstandingToken.objects.filter(user=user)
+        for t in tokens:
+            BlacklistedToken.objects.get_or_create(token=t)
+    except Exception:
+        pass
+
+    return Response({"message": "Password reset successfully. You can now login with your new password."}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def logout_view(request):
+    """
+    Secure Logout:
+    - Revokes and blacklists the client's refresh token
+    """
+    refresh_token = request.data.get('refresh')
+    if not refresh_token:
+        return Response({"error": "Refresh token is required for logout revocation."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+        return Response({"message": "Successfully logged out and session revoked."}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": "Invalid or already blacklisted token."}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])

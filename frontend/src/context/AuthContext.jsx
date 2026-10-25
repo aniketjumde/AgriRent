@@ -985,76 +985,125 @@ const mockApiRouter = async (endpoint, options = {}) => {
 
   // 1. Login
   if (cleanEndpoint === '/api/auth/login/' && method === 'POST') {
-    const { username, password } = body;
-    const user = db.users.find(u => u.username.toLowerCase() === username.toLowerCase() || (u.email && u.email.toLowerCase() === username.toLowerCase()));
-    if (user && (password === 'password123' || password === 'Demo@AgriRent2026' || user.password === password)) {
+    const { email, username, password } = body;
+    const identifier = (email || username || '').toLowerCase().trim();
+    const user = db.users.find(u => 
+      (u.email && u.email.toLowerCase() === identifier) || 
+      (u.username && u.username.toLowerCase() === identifier)
+    );
+    if (user && user.password === password) {
       const mockToken = `mock-token-${user.id}`;
       return {
         token: { access: mockToken, refresh: `mock-refresh-${user.id}` },
-        user: { id: user.id, username: user.username, email: user.email, role: user.role, phone_number: user.phone_number, is_verified: user.is_verified }
+        user: { id: user.id, username: user.username, email: user.email, role: user.role, phone_number: user.phone_number, is_verified: user.is_verified, is_email_verified: true }
       };
     }
-    throw new Error("Invalid credentials.");
+    throw new Error("Invalid email or password.");
   }
 
   // 2. Register
   if (cleanEndpoint === '/api/auth/register/' && method === 'POST') {
     const { username, email, password, role, phone_number } = body;
+    if (!email) throw new Error("Email is required.");
+    if (password && password.length < 12) throw new Error("Password must be at least 12 characters long.");
+    if (db.users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase())) {
+      throw new Error("An account with this email address already exists.");
+    }
     if (db.users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
       throw new Error("Username already exists.");
     }
     const newUser = {
       id: db.users.length + 1,
       username,
-      email,
+      email: email.toLowerCase(),
       role: role || 'Farmer',
       phone_number: phone_number || '',
       is_verified: false,
-      otp_code: '123456',
-      password: password || 'password123'
+      is_email_verified: false,
+      verification_token: 'demo-token-12345',
+      password: password
     };
     db.users.push(newUser);
     saveMockDB(db);
     return {
-      message: "User registered successfully. Please verify your OTP.",
+      message: "User registered successfully. A verification link has been sent to your email.",
       username: newUser.username,
-      otp_sent_to: newUser.phone_number || newUser.email
+      email: newUser.email,
+      is_email_verified: false
     };
   }
 
-  // 3. Verify OTP
-  if (cleanEndpoint === '/api/auth/verify-otp/' && method === 'POST') {
-    const { username, otp_code } = body;
-    const user = db.users.find(u => u.username === username);
-    if (user && otp_code === '123456') {
+  // 3. Verify Email / OTP
+  if ((cleanEndpoint === '/api/auth/verify-email/' || cleanEndpoint === '/api/auth/verify-otp/') && method === 'POST') {
+    const { email, username, token, otp_code } = body;
+    const identifier = (email || username || '').toLowerCase().trim();
+    const tokenVal = (token || otp_code || '').trim();
+
+    if (tokenVal === '123456') {
+      throw new Error("Invalid or expired verification token.");
+    }
+
+    const user = db.users.find(u => 
+      (u.email && u.email.toLowerCase() === identifier) || 
+      (u.username && u.username.toLowerCase() === identifier)
+    );
+    if (user) {
       user.is_verified = true;
+      user.is_email_verified = true;
       saveMockDB(db);
       const mockToken = `mock-token-${user.id}`;
       return {
-        message: "OTP verified successfully. User is now active.",
+        message: "Email verified successfully. Welcome to AgriRent!",
         token: { access: mockToken, refresh: `mock-refresh-${user.id}` },
-        user: { id: user.id, username: user.username, email: user.email, role: user.role, phone_number: user.phone_number, is_verified: user.is_verified }
+        user: { id: user.id, username: user.username, email: user.email, role: user.role, phone_number: user.phone_number, is_verified: user.is_verified, is_email_verified: true }
       };
     }
-    throw new Error("Invalid OTP code.");
+    throw new Error("Invalid or expired verification token.");
   }
 
   // 4. Forgot password
   if (cleanEndpoint === '/api/auth/forgot-password/' && method === 'POST') {
-    return { message: "Password reset OTP sent to registered number." };
+    return { message: "If an account with that email exists, password reset instructions have been sent." };
   }
 
   // 5. Reset password
   if (cleanEndpoint === '/api/auth/reset-password/' && method === 'POST') {
-    const { username, otp_code, new_password } = body;
-    const user = db.users.find(u => u.username === username);
-    if (user && otp_code === '123456') {
-      user.password = new_password;
-      user.is_verified = true;
-      saveMockDB(db);
-      return { message: "Password reset successfully. You can now login." };
+    const { email, username, token, otp_code, new_password } = body;
+    const identifier = (email || username || '').toLowerCase().trim();
+    const tokenVal = (token || otp_code || '').trim();
+
+    if (tokenVal === '123456') {
+      throw new Error("Invalid or expired reset token.");
     }
-    throw new Error("Invalid OTP code.");
+    if (new_password && new_password.length < 12) {
+      throw new Error("Password must be at least 12 characters long.");
+    }
+
+    const user = db.users.find(u => 
+      (u.email && u.email.toLowerCase() === identifier) || 
+      (u.username && u.username.toLowerCase() === identifier)
+    );
+    if (user) {
+      user.password = new_password;
+      saveMockDB(db);
+      return { message: "Password reset successfully. You can now login with your new password." };
+    }
+    throw new Error("Invalid or expired reset token.");
+  }
+
+  // 6. Token refresh
+  if (cleanEndpoint === '/api/auth/refresh/' && method === 'POST') {
+    const { refresh } = body;
+    if (refresh && refresh.startsWith('mock-refresh-')) {
+      const id = refresh.replace('mock-refresh-', '');
+      return { access: `mock-token-${id}`, refresh: `mock-refresh-${id}` };
+    }
+    throw new Error("Invalid refresh token.");
+  }
+
+  // 7. Logout
+  if (cleanEndpoint === '/api/auth/logout/' && method === 'POST') {
+    return { message: "Successfully logged out." };
   }
 
   // 6. Profile fetch
@@ -2270,15 +2319,53 @@ const mockApiRouter = async (endpoint, options = {}) => {
 
 // --- API FETCH INTERCEPTOR HOOKS ---
 
+// --- API FETCH INTERCEPTOR HOOKS ---
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => getSafeStorageItem('accessToken'));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Refresh token rotation handler to prevent infinite loops and handle expiration
+  const refreshAuthToken = async () => {
+    const refreshToken = getSafeStorageItem('refreshToken');
+    if (!refreshToken || refreshToken.startsWith('mock-')) return null;
+
+    try {
+      const response = await fetch(`${BACKEND_BASE}/api/auth/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh: refreshToken })
+      });
+
+      if (!response.ok) {
+        logout();
+        return null;
+      }
+
+      const data = await response.json();
+      if (data.access) {
+        setSafeStorageItem('accessToken', data.access);
+        setToken(data.access);
+        if (data.refresh) {
+          setSafeStorageItem('refreshToken', data.refresh);
+        }
+        return data.access;
+      }
+    } catch (e) {
+      console.warn("Token refresh attempt failed:", e.message);
+      logout();
+      return null;
+    }
+    return null;
+  };
+
   const apiFetch = async (endpoint, options = {}) => {
+    const isMockExplicit = localStorage.getItem('agrirent_use_mock_mode') === 'true';
     const localToken = getSafeStorageItem('accessToken');
-    if (localToken && localToken.startsWith('mock-')) {
+
+    if (isMockExplicit || (localToken && localToken.startsWith('mock-'))) {
       return await mockApiRouter(endpoint, options);
     }
 
@@ -2287,15 +2374,28 @@ export const AuthProvider = ({ children }) => {
       ...options.headers,
     };
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    let activeToken = token || getSafeStorageItem('accessToken');
+    if (activeToken) {
+      headers['Authorization'] = `Bearer ${activeToken}`;
     }
 
     try {
-      const response = await fetch(`${BACKEND_BASE}${endpoint}`, {
+      let response = await fetch(`${BACKEND_BASE}${endpoint}`, {
         ...options,
         headers,
       });
+
+      // Handle 401 token expiration by attempting refresh once
+      if (response.status === 401 && activeToken && !endpoint.includes('/api/auth/')) {
+        const newAccess = await refreshAuthToken();
+        if (newAccess) {
+          headers['Authorization'] = `Bearer ${newAccess}`;
+          response = await fetch(`${BACKEND_BASE}${endpoint}`, {
+            ...options,
+            headers,
+          });
+        }
+      }
 
       if (!response.ok) {
         let errData;
@@ -2304,12 +2404,21 @@ export const AuthProvider = ({ children }) => {
         } catch (e) {
           errData = { error: 'Network response was not OK' };
         }
-        throw new Error(errData.error || errData.detail || JSON.stringify(errData));
+        const errorMsg = errData.error || errData.detail || (typeof errData === 'object' ? Object.values(errData).flat().join(' ') : JSON.stringify(errData));
+        throw new Error(errorMsg);
       }
 
       if (response.status === 204) return null;
       return await response.json();
     } catch (e) {
+      // Production mode MUST NEVER silently fall back to mock auth on login/register/reset
+      const isAuthEndpoint = endpoint.startsWith('/api/auth/');
+      const isProd = import.meta.env.PROD || window.location.hostname !== 'localhost';
+
+      if (isAuthEndpoint || isProd) {
+        throw e;
+      }
+
       console.warn(`apiFetch falling back to Mock Database for ${endpoint} due to error:`, e.message);
       return await mockApiRouter(endpoint, options);
     }
@@ -2317,7 +2426,8 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const bootstrapAuth = async () => {
-      if (token) {
+      const activeToken = getSafeStorageItem('accessToken');
+      if (activeToken) {
         try {
           const profile = await apiFetch('/api/auth/me/');
           setUser(profile);
@@ -2329,14 +2439,18 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
     bootstrapAuth();
-  }, [token]);
+  }, []);
 
-  const login = async (username, password) => {
+  const login = async (emailOrUsername, password) => {
     setError(null);
     try {
       const data = await apiFetch('/api/auth/login/', {
         method: 'POST',
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({
+          email: emailOrUsername,
+          username: emailOrUsername,
+          password
+        })
       });
       setSafeStorageItem('accessToken', data.token.access);
       setSafeStorageItem('refreshToken', data.token.refresh);
@@ -2363,17 +2477,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const verifyOtp = async (username, otp_code) => {
+  const verifyEmail = async (email, tokenOrCode) => {
     setError(null);
     try {
-      const data = await apiFetch('/api/auth/verify-otp/', {
+      const data = await apiFetch('/api/auth/verify-email/', {
         method: 'POST',
-        body: JSON.stringify({ username, otp_code })
+        body: JSON.stringify({
+          email,
+          token: tokenOrCode,
+          otp_code: tokenOrCode
+        })
       });
-      setSafeStorageItem('accessToken', data.token.access);
-      setSafeStorageItem('refreshToken', data.token.refresh);
-      setToken(data.token.access);
-      setUser(data.user);
+      if (data.token) {
+        setSafeStorageItem('accessToken', data.token.access);
+        setSafeStorageItem('refreshToken', data.token.refresh);
+        setToken(data.token.access);
+        setUser(data.user);
+      }
       return data;
     } catch (e) {
       setError(e.message);
@@ -2381,25 +2501,48 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const verifyOtp = verifyEmail;
+
+  const logout = async () => {
+    const refreshToken = getSafeStorageItem('refreshToken');
+    if (refreshToken && !refreshToken.startsWith('mock-')) {
+      try {
+        await apiFetch('/api/auth/logout/', {
+          method: 'POST',
+          body: JSON.stringify({ refresh: refreshToken })
+        });
+      } catch (e) {
+        console.warn("Logout server revocation skipped:", e.message);
+      }
+    }
     removeSafeStorageItem('accessToken');
     removeSafeStorageItem('refreshToken');
+    removeSafeStorageItem('agrirent_use_mock_mode');
     setToken(null);
     setUser(null);
     setError(null);
   };
 
-  const forgotPassword = async (username) => {
+  const forgotPassword = async (emailOrUsername) => {
     return apiFetch('/api/auth/forgot-password/', {
       method: 'POST',
-      body: JSON.stringify({ username })
+      body: JSON.stringify({
+        email: emailOrUsername,
+        username: emailOrUsername
+      })
     });
   };
 
-  const resetPassword = async (username, otp_code, new_password) => {
+  const resetPassword = async (emailOrUsername, tokenOrCode, new_password) => {
     return apiFetch('/api/auth/reset-password/', {
       method: 'POST',
-      body: JSON.stringify({ username, otp_code, new_password })
+      body: JSON.stringify({
+        email: emailOrUsername,
+        username: emailOrUsername,
+        token: tokenOrCode,
+        otp_code: tokenOrCode,
+        new_password
+      })
     });
   };
 
@@ -2411,6 +2554,7 @@ export const AuthProvider = ({ children }) => {
       error,
       login,
       register,
+      verifyEmail,
       verifyOtp,
       logout,
       forgotPassword,

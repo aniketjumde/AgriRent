@@ -1,49 +1,48 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Tractor, Lock, User, AlertCircle, RefreshCw, KeyRound } from 'lucide-react';
+import { Tractor, Lock, Mail, AlertCircle, RefreshCw, KeyRound, CheckCircle2 } from 'lucide-react';
 
 export default function LoginPage({ onNavigate }) {
   const { login, forgotPassword, resetPassword } = useAuth();
   const { t } = useLanguage();
 
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Forgot Password flow states
   const [showForgot, setShowForgot] = useState(false);
-  const [forgotUsername, setForgotUsername] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetTokenSent, setResetTokenSent] = useState(false);
+  const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!username || !password) return;
+    if (!email || !password) return;
     setLoading(true);
     setErrorMsg('');
     try {
-      await login(username, password);
-      // Auth bootstrap handles profile loading and state sync. Page routing will auto update.
+      await login(email, password);
     } catch (e) {
-      setErrorMsg(e.message || "Login failed. Check username and password.");
+      setErrorMsg(e.message || "Login failed. Check your email and password.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSendForgotOtp = async (e) => {
+  const handleSendResetEmail = async (e) => {
     e.preventDefault();
-    if (!forgotUsername) return;
+    if (!forgotEmail) return;
     setLoading(true);
     setErrorMsg('');
     try {
-      await forgotPassword(forgotUsername);
-      setOtpSent(true);
-      setSuccessMsg("Reset OTP code sent to your registered phone number. (Use '123456')");
+      const res = await forgotPassword(forgotEmail);
+      setResetTokenSent(true);
+      setSuccessMsg(res.message || "If an account with that email exists, reset instructions have been dispatched.");
     } catch (e) {
       setErrorMsg(e.message);
     } finally {
@@ -53,18 +52,22 @@ export default function LoginPage({ onNavigate }) {
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    if (!forgotUsername || !otpCode || !newPassword) return;
+    if (!forgotEmail || !resetToken || !newPassword) return;
+    if (newPassword.length < 12) {
+      setErrorMsg("Password must be at least 12 characters long.");
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      await resetPassword(forgotUsername, otpCode, newPassword);
-      setSuccessMsg("Password reset successfully. You can now log in.");
+      await resetPassword(forgotEmail, resetToken, newPassword);
+      setSuccessMsg("Password reset successfully. You can now log in with your new password.");
       setTimeout(() => {
         setShowForgot(false);
-        setOtpSent(false);
-        setForgotUsername('');
-        setOtpCode('');
+        setResetTokenSent(false);
+        setForgotEmail('');
+        setResetToken('');
         setNewPassword('');
         setSuccessMsg('');
       }, 2000);
@@ -100,7 +103,7 @@ export default function LoginPage({ onNavigate }) {
 
         {successMsg && (
           <div className="px-4 py-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2 mb-6">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
             <span>{successMsg}</span>
           </div>
         )}
@@ -109,17 +112,17 @@ export default function LoginPage({ onNavigate }) {
         {!showForgot ? (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Username</label>
+              <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                  <User className="w-4 h-4" />
+                  <Mail className="w-4 h-4" />
                 </span>
                 <input
-                  type="text"
+                  type="email"
                   required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your registered email"
                   className="w-full pl-10 pr-4 py-3 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
                 />
               </div>
@@ -130,7 +133,7 @@ export default function LoginPage({ onNavigate }) {
                 <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Password</label>
                 <button
                   type="button"
-                  onClick={() => setShowForgot(true)}
+                  onClick={() => { setShowForgot(true); setErrorMsg(''); setSuccessMsg(''); }}
                   className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
                 >
                   Forgot Password?
@@ -145,7 +148,7 @@ export default function LoginPage({ onNavigate }) {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
+                  placeholder="Enter your password"
                   className="w-full pl-10 pr-4 py-3 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
                 />
               </div>
@@ -171,7 +174,7 @@ export default function LoginPage({ onNavigate }) {
               </button>
             </div>
 
-            {/* Quick Demo Account Selector */}
+            {/* Quick Demo Account Selector with Email and Role Display */}
             <div className="pt-4 border-t border-slate-200/60 dark:border-slate-800/60">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -184,21 +187,21 @@ export default function LoginPage({ onNavigate }) {
               <div className="grid grid-cols-3 gap-1.5">
                 <button
                   type="button"
-                  onClick={() => { setUsername('farmer_suresh'); setPassword('Demo@AgriRent2026'); }}
+                  onClick={() => { setEmail('farmer.suresh@agrirent.demo'); setPassword('Demo@AgriRent2026'); }}
                   className="px-2 py-1.5 text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-lg text-center border border-emerald-200 dark:border-emerald-800/50 transition-colors"
                 >
                   🌾 Farmer (Suresh)
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setUsername('operator_rajesh'); setPassword('Demo@AgriRent2026'); }}
+                  onClick={() => { setEmail('operator.rajesh@agrirent.demo'); setPassword('Demo@AgriRent2026'); }}
                   className="px-2 py-1.5 text-[11px] font-semibold bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg text-center border border-blue-200 dark:border-blue-800/50 transition-colors"
                 >
                   🚜 Operator (Rajesh)
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setUsername('owner_balasaheb'); setPassword('Demo@AgriRent2026'); }}
+                  onClick={() => { setEmail('owner.balasaheb@agrirent.demo'); setPassword('Demo@AgriRent2026'); }}
                   className="px-2 py-1.5 text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-lg text-center border border-amber-200 dark:border-amber-800/50 transition-colors"
                 >
                   🏢 Owner (Balasaheb)
@@ -214,14 +217,20 @@ export default function LoginPage({ onNavigate }) {
                   <div>
                     <span className="font-bold text-emerald-600 dark:text-emerald-400">Farmers: </span>
                     <div className="flex flex-wrap gap-1 mt-0.5">
-                      {['farmer_suresh', 'farmer_anita', 'farmer_vikram', 'farmer_priya', 'farmer_ramesh'].map(u => (
+                      {[
+                        { label: 'Suresh', email: 'farmer.suresh@agrirent.demo' },
+                        { label: 'Anita', email: 'farmer.anita@agrirent.demo' },
+                        { label: 'Vikram', email: 'farmer.vikram@agrirent.demo' },
+                        { label: 'Priya', email: 'farmer.priya@agrirent.demo' },
+                        { label: 'Ramesh', email: 'farmer.ramesh@agrirent.demo' }
+                      ].map(acc => (
                         <button
-                          key={u}
+                          key={acc.email}
                           type="button"
-                          onClick={() => { setUsername(u); setPassword('Demo@AgriRent2026'); }}
+                          onClick={() => { setEmail(acc.email); setPassword('Demo@AgriRent2026'); }}
                           className="px-1.5 py-0.5 bg-white dark:bg-slate-800 border rounded text-[10px] hover:border-emerald-500"
                         >
-                          {u}
+                          {acc.label}
                         </button>
                       ))}
                     </div>
@@ -229,14 +238,20 @@ export default function LoginPage({ onNavigate }) {
                   <div>
                     <span className="font-bold text-blue-600 dark:text-blue-400">Operators: </span>
                     <div className="flex flex-wrap gap-1 mt-0.5">
-                      {['operator_rajesh', 'operator_sunil', 'operator_amit', 'operator_ganesh', 'operator_sachin'].map(u => (
+                      {[
+                        { label: 'Rajesh', email: 'operator.rajesh@agrirent.demo' },
+                        { label: 'Sunil', email: 'operator.sunil@agrirent.demo' },
+                        { label: 'Amit', email: 'operator.amit@agrirent.demo' },
+                        { label: 'Ganesh', email: 'operator.ganesh@agrirent.demo' },
+                        { label: 'Sachin', email: 'operator.sachin@agrirent.demo' }
+                      ].map(acc => (
                         <button
-                          key={u}
+                          key={acc.email}
                           type="button"
-                          onClick={() => { setUsername(u); setPassword('Demo@AgriRent2026'); }}
+                          onClick={() => { setEmail(acc.email); setPassword('Demo@AgriRent2026'); }}
                           className="px-1.5 py-0.5 bg-white dark:bg-slate-800 border rounded text-[10px] hover:border-blue-500"
                         >
-                          {u}
+                          {acc.label}
                         </button>
                       ))}
                     </div>
@@ -244,51 +259,53 @@ export default function LoginPage({ onNavigate }) {
                   <div>
                     <span className="font-bold text-amber-600 dark:text-amber-400">Owners: </span>
                     <div className="flex flex-wrap gap-1 mt-0.5">
-                      {['owner_balasaheb', 'owner_kavita', 'owner_dattatray', 'owner_meena', 'owner_sanjay'].map(u => (
+                      {[
+                        { label: 'Balasaheb', email: 'owner.balasaheb@agrirent.demo' },
+                        { label: 'Kavita', email: 'owner.kavita@agrirent.demo' },
+                        { label: 'Dattatray', email: 'owner.dattatray@agrirent.demo' },
+                        { label: 'Meena', email: 'owner.meena@agrirent.demo' },
+                        { label: 'Sanjay', email: 'owner.sanjay@agrirent.demo' }
+                      ].map(acc => (
                         <button
-                          key={u}
+                          key={acc.email}
                           type="button"
-                          onClick={() => { setUsername(u); setPassword('Demo@AgriRent2026'); }}
+                          onClick={() => { setEmail(acc.email); setPassword('Demo@AgriRent2026'); }}
                           className="px-1.5 py-0.5 bg-white dark:bg-slate-800 border rounded text-[10px] hover:border-amber-500"
                         >
-                          {u}
+                          {acc.label}
                         </button>
                       ))}
                     </div>
                   </div>
                 </div>
               </details>
-
-              <p className="text-[10px] text-slate-400 text-center mt-2">
-                Shared Password: <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-600 dark:text-slate-300 font-mono">Demo@AgriRent2026</code>
-              </p>
             </div>
           </form>
         ) : (
-          /* Forgot Password OTP / Reset Form */
+          /* Forgot Password Token / Reset Form */
           <div className="space-y-5">
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <KeyRound className="w-4 h-4 text-emerald-600" />
-              Reset Password Account
+              Reset Account Password
             </h3>
             
-            {!otpSent ? (
-              <form onSubmit={handleSendForgotOtp} className="space-y-4">
+            {!resetTokenSent ? (
+              <form onSubmit={handleSendResetEmail} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Username</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Registered Email</label>
                   <input
-                    type="text"
+                    type="email"
                     required
-                    value={forgotUsername}
-                    onChange={(e) => setForgotUsername(e.target.value)}
-                    placeholder="Enter username to reset"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="Enter your registered email"
                     className="w-full px-4 py-3 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
                   />
                 </div>
                 <div className="flex gap-3">
                   <button
                     type="button"
-                    onClick={() => setShowForgot(false)}
+                    onClick={() => { setShowForgot(false); setErrorMsg(''); setSuccessMsg(''); }}
                     className="flex-1 py-3 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-sm"
                   >
                     Back to Login
@@ -296,51 +313,53 @@ export default function LoginPage({ onNavigate }) {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-md"
+                    className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    Send OTP Code
+                    {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
+                    Send Reset Link
                   </button>
                 </div>
               </form>
             ) : (
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">OTP Code</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Reset Token</label>
                   <input
                     type="text"
                     required
-                    maxLength={6}
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
-                    placeholder="Enter 6-digit OTP code"
-                    className="w-full px-4 py-3 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 text-center tracking-widest font-black focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                    value={resetToken}
+                    onChange={(e) => setResetToken(e.target.value)}
+                    placeholder="Enter single-use reset token"
+                    className="w-full px-4 py-3 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 text-center font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">New Password</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">New Password (min 12 chars)</label>
                   <input
                     type="password"
                     required
+                    minLength={12}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
+                    placeholder="Enter new secure password"
                     className="w-full px-4 py-3 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
                   />
                 </div>
                 <div className="flex gap-3">
                   <button
                     type="button"
-                    onClick={() => setOtpSent(false)}
+                    onClick={() => setResetTokenSent(false)}
                     className="flex-1 py-3 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-sm"
                   >
-                    Change Username
+                    Change Email
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-md"
+                    className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    Reset Password
+                    {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
+                    Save New Password
                   </button>
                 </div>
               </form>

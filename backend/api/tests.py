@@ -61,7 +61,7 @@ class OperatorModuleTests(TestCase):
         reg_response = self.client.post('/api/auth/register/', {
             'username': 'new_operator',
             'email': 'new_op@agrirent.com',
-            'password': 'password123',
+            'password': 'SecurePassword@2026',
             'role': 'Operator',
             'phone_number': '+919876540000'
         }, format='json')
