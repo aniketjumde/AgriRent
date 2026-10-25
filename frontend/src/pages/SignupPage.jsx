@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Tractor, User, Mail, Phone, Lock, Eye, EyeOff, AlertCircle, RefreshCw, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Tractor, User, Mail, Phone, Lock, Eye, EyeOff, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export default function SignupPage({ onNavigate }) {
-  const { register, verifyEmail, resendVerificationCode } = useAuth();
+  const { register } = useAuth();
   const { t } = useLanguage();
 
   // Signup form inputs
@@ -22,28 +22,10 @@ export default function SignupPage({ onNavigate }) {
   // Field-level error messages
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // Flow control states
-  const [verifyScreen, setVerifyScreen] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-
-  // Resend cooldown timer
-  const [resendCooldown, setResendCooldown] = useState(0);
-
   // UI status
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
-
-  // Timer tick for resend cooldown
-  useEffect(() => {
-    let timer;
-    if (resendCooldown > 0) {
-      timer = setInterval(() => {
-        setResendCooldown((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [resendCooldown]);
 
   // Client-side field validation
   const validateForm = () => {
@@ -109,45 +91,10 @@ export default function SignupPage({ onNavigate }) {
       const trimmedUsername = username.trim();
       const normalizedEmail = email.trim().toLowerCase();
       const res = await register(trimmedUsername, normalizedEmail, password, role, phone.trim());
-      setVerifyScreen(true);
-      setResendCooldown(60);
-      setInfoMsg(res.message || "Registration successful! A 6-digit verification code has been dispatched to your email address.");
+      setInfoMsg(res.message || "Registration successful! Redirecting to your dashboard...");
+      // Account created immediately; AuthContext sets user/token and navigation is handled automatically
     } catch (e) {
       setErrorMsg(e.message || "Registration failed. Check if username or email is already taken.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerify = async (e) => {
-    e.preventDefault();
-    if (!verificationCode.trim()) {
-      setErrorMsg("Please enter the 6-digit verification code sent to your email.");
-      return;
-    }
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      await verifyEmail(email.trim().toLowerCase(), verificationCode.trim());
-      setInfoMsg("Email verified successfully! Entering your dashboard...");
-    } catch (e) {
-      setErrorMsg(e.message || "Invalid or expired verification code.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendCode = async () => {
-    if (resendCooldown > 0 || loading) return;
-    setLoading(true);
-    setErrorMsg('');
-    setInfoMsg('');
-    try {
-      const res = await resendVerificationCode(email.trim().toLowerCase());
-      setResendCooldown(60);
-      setInfoMsg(res.message || "A fresh 6-digit verification code has been dispatched to your email.");
-    } catch (e) {
-      setErrorMsg(e.message || "Could not resend verification code. Please try again shortly.");
     } finally {
       setLoading(false);
     }
@@ -183,282 +130,220 @@ export default function SignupPage({ onNavigate }) {
           </div>
         )}
 
-        {/* 1. Register input details screen */}
-        {!verifyScreen ? (
-          <form onSubmit={handleRegisterSubmit} className="space-y-4" noValidate>
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
-                Username <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                  <User className="w-4 h-4" />
-                </span>
-                <input
-                  type="text"
-                  required
-                  value={username}
-                  onChange={(e) => {
-                    setUsername(e.target.value);
-                    if (fieldErrors.username) setFieldErrors({ ...fieldErrors, username: null });
-                  }}
-                  placeholder="e.g. kisan_suresh"
-                  className={`w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
-                    fieldErrors.username ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
-                  }`}
-                />
-              </div>
-              {fieldErrors.username && (
-                <p className="text-[11px] text-red-500 mt-1">{fieldErrors.username}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
-                Email Address <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                  <Mail className="w-4 h-4" />
-                </span>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: null });
-                  }}
-                  placeholder="name@example.com"
-                  className={`w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
-                    fieldErrors.email ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
-                  }`}
-                />
-              </div>
-              {fieldErrors.email && (
-                <p className="text-[11px] text-red-500 mt-1">{fieldErrors.email}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
-                Phone Number (Optional)
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                  <Phone className="w-4 h-4" />
-                </span>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value);
-                    if (fieldErrors.phone) setFieldErrors({ ...fieldErrors, phone: null });
-                  }}
-                  placeholder="e.g. +91 98220 11001"
-                  className={`w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
-                    fieldErrors.phone ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
-                  }`}
-                />
-              </div>
-              {fieldErrors.phone && (
-                <p className="text-[11px] text-red-500 mt-1">{fieldErrors.phone}</p>
-              )}
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  Password <span className="text-red-500">*</span>
-                </label>
-                <span className="text-[10px] text-slate-400">Min. 12 characters</span>
-              </div>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                  <Lock className="w-4 h-4" />
-                </span>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  minLength={12}
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (fieldErrors.password) setFieldErrors({ ...fieldErrors, password: null });
-                  }}
-                  placeholder="Create secure password (12+ characters)"
-                  className={`w-full pl-10 pr-10 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
-                    fieldErrors.password ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {fieldErrors.password && (
-                <p className="text-[11px] text-red-500 mt-1">{fieldErrors.password}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
-                Confirm Password <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                  <Lock className="w-4 h-4" />
-                </span>
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value);
-                    if (fieldErrors.confirmPassword) setFieldErrors({ ...fieldErrors, confirmPassword: null });
-                  }}
-                  placeholder="Re-enter your password"
-                  className={`w-full pl-10 pr-10 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
-                    fieldErrors.confirmPassword ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                >
-                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {fieldErrors.confirmPassword && (
-                <p className="text-[11px] text-red-500 mt-1">{fieldErrors.confirmPassword}</p>
-              )}
-            </div>
-
-            {/* Role select */}
-            <div>
-              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Registering As</label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRole('Farmer')}
-                  className={`py-2 rounded-xl text-xs font-bold transition-all border ${
-                    role === 'Farmer'
-                      ? 'bg-emerald-50 border-emerald-500 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400'
-                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
-                  }`}
-                >
-                  {t('farmer')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('Owner')}
-                  className={`py-2 rounded-xl text-xs font-bold transition-all border ${
-                    role === 'Owner'
-                      ? 'bg-emerald-50 border-emerald-500 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400'
-                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
-                  }`}
-                >
-                  {t('owner')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('Operator')}
-                  className={`py-2 rounded-xl text-xs font-bold transition-all border ${
-                    role === 'Operator'
-                      ? 'bg-emerald-50 border-emerald-500 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400'
-                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
-                  }`}
-                >
-                  {t('operator') || 'Operator'}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm mt-2"
-            >
-              {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-              {t('signup')}
-            </button>
-
-            <div className="text-center pt-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Already registered? </span>
-              <button
-                type="button"
-                onClick={() => onNavigate('login')}
-                className="text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
-              >
-                {t('login')}
-              </button>
-            </div>
-          </form>
-        ) : (
-          /* 2. Verification Code Screen */
-          <form onSubmit={handleVerify} className="space-y-6">
-            <div className="text-center space-y-2">
-              <h3 className="font-extrabold text-lg text-slate-800 dark:text-slate-100">Verify Your Email</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                A 6-digit verification code has been dispatched to <strong className="text-emerald-600 dark:text-emerald-400">{email}</strong>.
-              </p>
-              <p className="text-[11px] text-slate-400">
-                Code expires in <span className="font-semibold text-amber-500">5 minutes</span>.
-              </p>
-            </div>
-
-            <div>
+        {/* Register input details form */}
+        <form onSubmit={handleRegisterSubmit} className="space-y-4" noValidate>
+          <div>
+            <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
+              Username <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                <User className="w-4 h-4" />
+              </span>
               <input
                 type="text"
                 required
-                maxLength={6}
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="Enter 6-digit code"
-                className="w-full py-3.5 text-center text-xl font-mono tracking-widest font-black rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  if (fieldErrors.username) setFieldErrors({ ...fieldErrors, username: null });
+                }}
+                placeholder="e.g. kisan_suresh"
+                className={`w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
+                  fieldErrors.username ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
+                }`}
               />
             </div>
+            {fieldErrors.username && (
+              <p className="text-[11px] text-red-500 mt-1">{fieldErrors.username}</p>
+            )}
+          </div>
 
-            <div className="flex flex-col gap-2.5">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3.5 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-                Verify & Enter Dashboard
-              </button>
-
-              <button
-                type="button"
-                onClick={handleResendCode}
-                disabled={resendCooldown > 0 || loading}
-                className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                {resendCooldown > 0 ? `Resend Code in ${resendCooldown}s` : "Didn't receive code? Resend"}
-              </button>
-            </div>
-
-            <div className="text-center pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setVerifyScreen(false);
-                  setErrorMsg('');
-                  setInfoMsg('');
+          <div>
+            <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
+              Email Address <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                <Mail className="w-4 h-4" />
+              </span>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: null });
                 }}
-                className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium"
+                placeholder="name@example.com"
+                className={`w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
+                  fieldErrors.email ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
+                }`}
+              />
+            </div>
+            {fieldErrors.email && (
+              <p className="text-[11px] text-red-500 mt-1">{fieldErrors.email}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
+              Phone Number (Optional)
+            </label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                <Phone className="w-4 h-4" />
+              </span>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  if (fieldErrors.phone) setFieldErrors({ ...fieldErrors, phone: null });
+                }}
+                placeholder="e.g. +91 98220 11001"
+                className={`w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
+                  fieldErrors.phone ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
+                }`}
+              />
+            </div>
+            {fieldErrors.phone && (
+              <p className="text-[11px] text-red-500 mt-1">{fieldErrors.phone}</p>
+            )}
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                Password <span className="text-red-500">*</span>
+              </label>
+              <span className="text-[10px] text-slate-400">Min. 12 characters</span>
+            </div>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                <Lock className="w-4 h-4" />
+              </span>
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={12}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (fieldErrors.password) setFieldErrors({ ...fieldErrors, password: null });
+                }}
+                placeholder="Create secure password (12+ characters)"
+                className={`w-full pl-10 pr-10 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
+                  fieldErrors.password ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
-                ← Edit registration details
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-          </form>
-        )}
+            {fieldErrors.password && (
+              <p className="text-[11px] text-red-500 mt-1">{fieldErrors.password}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
+              Confirm Password <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                <Lock className="w-4 h-4" />
+              </span>
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                required
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (fieldErrors.confirmPassword) setFieldErrors({ ...fieldErrors, confirmPassword: null });
+                }}
+                placeholder="Re-enter your password"
+                className={`w-full pl-10 pr-10 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
+                  fieldErrors.confirmPassword ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            {fieldErrors.confirmPassword && (
+              <p className="text-[11px] text-red-500 mt-1">{fieldErrors.confirmPassword}</p>
+            )}
+          </div>
+
+          {/* Role select */}
+          <div>
+            <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Registering As</label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setRole('Farmer')}
+                className={`py-2 rounded-xl text-xs font-bold transition-all border ${
+                  role === 'Farmer'
+                    ? 'bg-emerald-50 border-emerald-500 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                }`}
+              >
+                {t('farmer')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('Owner')}
+                className={`py-2 rounded-xl text-xs font-bold transition-all border ${
+                  role === 'Owner'
+                    ? 'bg-emerald-50 border-emerald-500 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                }`}
+              >
+                {t('owner')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('Operator')}
+                className={`py-2 rounded-xl text-xs font-bold transition-all border ${
+                  role === 'Operator'
+                    ? 'bg-emerald-50 border-emerald-500 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                }`}
+              >
+                {t('operator') || 'Operator'}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm mt-2"
+          >
+            {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
+            {t('signup')}
+          </button>
+
+          <div className="text-center pt-2">
+            <span className="text-xs text-slate-500 dark:text-slate-400">Already registered? </span>
+            <button
+              type="button"
+              onClick={() => onNavigate('login')}
+              className="text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+            >
+              {t('login')}
+            </button>
+          </div>
+        </form>
 
       </div>
     </div>

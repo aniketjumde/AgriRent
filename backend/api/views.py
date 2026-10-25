@@ -47,38 +47,24 @@ class AuthVerifyThrottle(ScopedRateThrottle):
 @throttle_classes([AuthRegisterThrottle])
 def register_view(request):
     """
-    Secure registration:
+    Direct registration:
     - Normalizes and validates unique email & username
     - Validates phone format and minimum 12-char password
-    - Generates cryptographically secure 6-digit verification code (expires in 5 mins)
-    - Dispatches verification email via configured provider
-    - Returns meaningful error if provider fails
+    - Immediately creates active & verified account
+    - Issues SimpleJWT access and refresh tokens directly
     """
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
-        
-        raw_code = generate_verification_code()
-        user.email_verification_token = hash_token(raw_code)
-        user.email_verification_sent_at = timezone.now()
-        user.verification_attempts = 0
-        user.otp_code = None
-        user.save()
-
-        try:
-            send_verification_email(user, raw_code)
-        except Exception as e:
-            # Delete incomplete user registration so they can re-try cleanly
-            user.delete()
-            return Response({
-                "error": "Failed to dispatch verification email. Please check your email address or try again shortly."
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        refresh = RefreshToken.for_user(user)
 
         return Response({
-            "message": "User registered successfully! A 6-digit verification code has been dispatched to your email address.",
-            "username": user.username,
-            "email": user.email,
-            "is_email_verified": False
+            "message": "User registered successfully!",
+            "token": {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token)
+            },
+            "user": UserProfileSerializer(user).data
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -235,15 +221,6 @@ def login_view(request):
     if user:
         if not user.is_active:
             return Response({"error": "This account is inactive. Please contact support."}, status=status.HTTP_403_FORBIDDEN)
-
-        if not (user.is_email_verified or user.is_verified):
-            return Response({
-                "error": "Account email is not verified. Please verify your email before logging in.",
-                "is_verified": False,
-                "is_email_verified": False,
-                "email": user.email,
-                "username": user.username
-            }, status=status.HTTP_403_FORBIDDEN)
             
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -254,7 +231,7 @@ def login_view(request):
             "user": UserProfileSerializer(user).data
         }, status=status.HTTP_200_OK)
 
-    return Response({"error": "Invalid email or password."}, status=status.HTTP_401_UNAUTHORIZED)
+    return Response({"error": "Invalid username/email or password."}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 @api_view(['POST'])

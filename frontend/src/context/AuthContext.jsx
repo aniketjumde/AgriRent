@@ -2537,13 +2537,26 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         body: JSON.stringify({ username, email, password, role, phone_number })
       });
+      if (data.token) {
+        setSafeStorageItem('accessToken', data.token.access);
+        setSafeStorageItem('refreshToken', data.token.refresh);
+        setToken(data.token.access);
+        setUser(data.user);
+      }
       return data;
     } catch (e) {
       const isNetworkError = e.message?.includes('unreachable') || e.message?.toLowerCase().includes('failed to fetch');
       if (isNetworkError) {
         console.info("[AgriRent] Remote WSGI backend unavailable; registering user directly in Supabase PostgreSQL database...");
         try {
-          return await supabaseBackend.register(username, email, password, role, phone_number);
+          const sbRes = await supabaseBackend.register(username, email, password, role, phone_number);
+          if (sbRes.token) {
+            setSafeStorageItem('accessToken', sbRes.token.access);
+            setSafeStorageItem('refreshToken', sbRes.token.refresh);
+            setToken(sbRes.token.access);
+            setUser(sbRes.user);
+          }
+          return sbRes;
         } catch (sbErr) {
           setError(sbErr.message);
           throw sbErr;

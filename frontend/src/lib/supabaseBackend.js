@@ -37,55 +37,62 @@ const supabaseRpc = async (fnName, params = {}) => {
 export const supabaseBackend = {
   // Auth
   async register(username, email, password, role, phone_number) {
-    const res = await supabaseRpc('custom_register_user', {
-      p_username: username,
-      p_email: email,
-      p_password: password,
-      p_role: role,
-      p_phone_number: phone_number || ''
-    });
-    if (res.error) throw new Error(res.error);
-    return res;
-  },
+      const res = await supabaseRpc('custom_register_user', {
+        p_username: username,
+        p_email: email,
+        p_password: password,
+        p_role: role,
+        p_phone_number: phone_number || ''
+      });
+      if (res.error) throw new Error(res.error);
+      return {
+        user: res.user,
+        token: {
+          access: `sb-token-${res.user.id}-${Date.now()}`,
+          refresh: `sb-refresh-${res.user.id}-${Date.now()}`
+        },
+        message: res.message || "User registered successfully!"
+      };
+    },
 
-  async verifyEmail(email, code) {
-    const res = await supabaseRpc('custom_verify_email', {
-      p_email: email,
-      p_code: code
-    });
-    if (res.error) throw new Error(res.error);
-    return {
-      user: res.user,
-      token: {
-        access: `sb-token-${res.user.id}-${Date.now()}`,
-        refresh: `sb-refresh-${res.user.id}-${Date.now()}`
-      },
-      message: res.message
-    };
-  },
+    async verifyEmail(email, code) {
+      const res = await supabaseRpc('custom_verify_email', {
+        p_email: email,
+        p_code: code
+      });
+      if (res.error) throw new Error(res.error);
+      return {
+        user: res.user,
+        token: {
+          access: `sb-token-${res.user.id}-${Date.now()}`,
+          refresh: `sb-refresh-${res.user.id}-${Date.now()}`
+        },
+        message: res.message
+      };
+    },
 
-  async resendCode(email) {
-    const res = await supabaseRpc('custom_resend_code', {
-      p_email: email
-    });
-    if (res.error) throw new Error(res.error);
-    return res;
-  },
+    async resendCode(email) {
+      const res = await supabaseRpc('custom_resend_code', {
+        p_email: email
+      });
+      if (res.error) throw new Error(res.error);
+      return res;
+    },
 
-  async login(emailOrUsername, password) {
-    const res = await supabaseRpc('custom_check_login', {
-      p_email: emailOrUsername,
-      p_password: password
-    });
-    if (res.error) throw new Error(res.error);
-    return {
-      user: res.user,
-      token: {
-        access: `sb-token-${res.user.id}-${Date.now()}`,
-        refresh: `sb-refresh-${res.user.id}-${Date.now()}`
-      }
-    };
-  },
+    async login(emailOrUsername, password) {
+      const res = await supabaseRpc('custom_check_login', {
+        p_email: emailOrUsername,
+        p_password: password
+      });
+      if (res.error) throw new Error(res.error);
+      return {
+        user: res.user,
+        token: {
+          access: `sb-token-${res.user.id}-${Date.now()}`,
+          refresh: `sb-refresh-${res.user.id}-${Date.now()}`
+        }
+      };
+    },
 
   async forgotPassword(email) {
     const res = await supabaseRpc('custom_forgot_password', {
