@@ -1,3 +1,4 @@
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from .models import (
     User, Equipment, Booking, Review, Message, Notification, SupportTicket,
@@ -26,25 +27,52 @@ class OperatorProfileSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    email = serializers.EmailField(required=True)
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'password', 'role', 'phone_number', 'is_verified', 'reliability_score', 'aadhaar_kyc_status', 'aadhaar_number_masked')
+        fields = (
+            'id', 'username', 'email', 'password', 'role', 'phone_number',
+            'is_verified', 'is_email_verified', 'reliability_score',
+            'aadhaar_kyc_status', 'aadhaar_number_masked'
+        )
+        read_only_fields = ('is_verified', 'is_email_verified', 'reliability_score', 'aadhaar_kyc_status', 'aadhaar_number_masked')
+
+    def validate_email(self, value):
+        normalized = value.strip().lower()
+        if User.objects.filter(email__iexact=normalized).exists():
+            raise serializers.ValidationError("An account with this email address already exists.")
+        return normalized
+
+    def validate_password(self, value):
+        if len(value) < 12:
+            raise serializers.ValidationError("Password must be at least 12 characters long.")
+        validate_password(value)
+        return value
+
+    def validate_role(self, value):
+        if value == 'Admin':
+            raise serializers.ValidationError("Admin accounts cannot be created via public registration.")
+        if value not in ['Farmer', 'Owner', 'Operator']:
+            raise serializers.ValidationError("Invalid role selected.")
+        return value
 
     def create(self, validated_data):
         role = validated_data.get('role', 'Farmer')
+        raw_password = validated_data.pop('password')
+        
         user = User.objects.create_user(
             username=validated_data['username'],
-            email=validated_data.get('email', ''),
+            email=validated_data['email'],
             role=role,
             phone_number=validated_data.get('phone_number', ''),
             is_verified=False,
+            is_email_verified=False,
             reliability_score=4.8,
             aadhaar_kyc_status='Verified',
             aadhaar_number_masked='XXXX-XXXX-1234'
         )
-        user.set_password(validated_data['password'])
-        user.otp_code = "123456" # Default test OTP
+        user.set_password(raw_password)
         user.save()
 
         # If registered as Operator, auto-create associated OperatorProfile
@@ -67,7 +95,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'id', 'username', 'email', 'role', 'phone_number', 'is_verified',
+            'id', 'username', 'email', 'role', 'phone_number',
+            'is_verified', 'is_email_verified',
             'reliability_score', 'aadhaar_kyc_status', 'aadhaar_number_masked',
             'operator_profile'
         )

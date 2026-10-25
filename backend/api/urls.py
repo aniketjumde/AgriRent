@@ -2,8 +2,10 @@ from .health_views import health_check_view
 from .upload_views import upload_equipment_image_view
 from .nearby_views import nearby_equipment_view, validate_cart_booking_view
 from django.urls import path
+from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
-    register_view, verify_otp_view, login_view, forgot_password_view, reset_password_view, get_me_view,
+    register_view, verify_email_view, verify_otp_view, login_view, logout_view,
+    forgot_password_view, reset_password_view, get_me_view,
     EquipmentListCreateView, EquipmentDetailView, verify_equipment_view, create_review_view,
     BookingListCreateView, update_booking_status_view, booking_chat_view, notification_list_view,
     SupportTicketListCreateView, update_ticket_status_view,
@@ -45,8 +47,11 @@ urlpatterns = [
 
     # Auth Routes
     path('auth/register/', register_view, name='register'),
+    path('auth/verify-email/', verify_email_view, name='verify-email'),
     path('auth/verify-otp/', verify_otp_view, name='verify-otp'),
     path('auth/login/', login_view, name='login'),
+    path('auth/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    path('auth/logout/', logout_view, name='logout'),
     path('auth/forgot-password/', forgot_password_view, name='forgot-password'),
     path('auth/reset-password/', reset_password_view, name='reset-password'),
     path('auth/me/', get_me_view, name='auth-me'),

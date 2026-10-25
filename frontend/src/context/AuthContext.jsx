@@ -78,9 +78,37 @@ const getMockDB = () => {
       phone_number: `+9198765433${10 + i}`,
       is_verified: true,
       otp_code: '123456',
-      password: 'password123'
+      password: 'Demo@AgriRent2026'
     });
   }
+
+  // 15 Pune Demo Accounts (5 Farmers, 5 Operators, 5 Owners)
+  const puneDemoAccounts = [
+    // Farmers
+    { id: 11, username: 'farmer_suresh', role: 'Farmer', email: 'farmer.suresh@agrirent.demo', phone_number: '+919822011001', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 12, username: 'farmer_anita', role: 'Farmer', email: 'farmer.anita@agrirent.demo', phone_number: '+919822011002', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 13, username: 'farmer_vikram', role: 'Farmer', email: 'farmer.vikram@agrirent.demo', phone_number: '+919822011003', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 14, username: 'farmer_priya', role: 'Farmer', email: 'farmer.priya@agrirent.demo', phone_number: '+919822011004', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 15, username: 'farmer_ramesh', role: 'Farmer', email: 'farmer.ramesh@agrirent.demo', phone_number: '+919822011005', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    // Operators
+    { id: 21, username: 'operator_rajesh', role: 'Operator', email: 'operator.rajesh@agrirent.demo', phone_number: '+919822022001', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 22, username: 'operator_sunil', role: 'Operator', email: 'operator.sunil@agrirent.demo', phone_number: '+919822022002', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 23, username: 'operator_amit', role: 'Operator', email: 'operator.amit@agrirent.demo', phone_number: '+919822022003', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 24, username: 'operator_ganesh', role: 'Operator', email: 'operator.ganesh@agrirent.demo', phone_number: '+919822022004', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 25, username: 'operator_sachin', role: 'Operator', email: 'operator.sachin@agrirent.demo', phone_number: '+919822022005', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    // Owners
+    { id: 31, username: 'owner_balasaheb', role: 'Owner', email: 'owner.balasaheb@agrirent.demo', phone_number: '+919822033001', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 32, username: 'owner_kavita', role: 'Owner', email: 'owner.kavita@agrirent.demo', phone_number: '+919822033002', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 33, username: 'owner_dattatray', role: 'Owner', email: 'owner.dattatray@agrirent.demo', phone_number: '+919822033003', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 34, username: 'owner_meena', role: 'Owner', email: 'owner.meena@agrirent.demo', phone_number: '+919822033004', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 35, username: 'owner_sanjay', role: 'Owner', email: 'owner.sanjay@agrirent.demo', phone_number: '+919822033005', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' }
+  ];
+
+  puneDemoAccounts.forEach(acc => {
+    if (!mockUsers.find(u => u.username === acc.username)) {
+      mockUsers.push(acc);
+    }
+  });
 
   const categories = ['Tractor', 'Harvester', 'Rotavator', 'Seeder', 'Sprayer', 'Crop Protection Equipment'];
   const titles = {
@@ -117,6 +145,154 @@ const getMockDB = () => {
   // Generate 50 Equipment Listings
   const mockEquipment = [];
   
+  // Pune Specific Machine Owner Listings
+  const puneEquipmentListings = [
+    {
+      id: 131,
+      title: "John Deere 5310 PowerTech 55HP Tractor",
+      category: "Tractor",
+      description: "High-torque 55 HP utility tractor with 4WD, power steering, and heavy hydraulic lift for deep soil inversion and tilling.",
+      rental_price_per_hour: 850.00,
+      latitude: 18.5912,
+      longitude: 73.7389,
+      address: "Phase 1 Agro Hub, Hinjawadi, Pune, Maharashtra 411057",
+      owner_username: "owner_balasaheb",
+      image_url: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 132,
+      title: "Shaktiman Semi-Champion Rotavator 7 Feet",
+      category: "Rotavator",
+      description: "Boron steel blades, multi-speed gearbox, excellent soil pulverized seedbed preparation in a single pass.",
+      rental_price_per_hour: 450.00,
+      latitude: 18.5925,
+      longitude: 73.7350,
+      address: "Maan Village Road, Hinjawadi, Pune, Maharashtra 411057",
+      owner_username: "owner_balasaheb",
+      image_url: "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 133,
+      title: "Kubota DC-68G Multi-Crop Combine Harvester",
+      category: "Harvester",
+      description: "Paddy and soybean combine harvester with high ground clearance, grain tank capacity of 1200L, and rapid straw separation.",
+      rental_price_per_hour: 2200.00,
+      latitude: 18.5987,
+      longitude: 73.7656,
+      address: "Datta Mandir Road, Wakad, Pune, Maharashtra 411057",
+      owner_username: "owner_kavita",
+      image_url: "https://images.unsplash.com/photo-1595273670150-bd0c3c392e46?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 134,
+      title: "Lemken Opal 090 3-Furrow Hydraulic Reversible Plough",
+      category: "Plough",
+      description: "Heavy duty reversible disc plough for breaking hardpan soil layers up to 14 inches deep.",
+      rental_price_per_hour: 500.00,
+      latitude: 18.6010,
+      longitude: 73.7620,
+      address: "Kaspate Vasti, Wakad, Pune, Maharashtra 411057",
+      owner_username: "owner_kavita",
+      image_url: "https://images.unsplash.com/photo-1592878904946-b3cd8ae243d0?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 135,
+      title: "National Agro Multi-Crop Precision Seed Drill",
+      category: "Seed Drill",
+      description: "11-tyne automated seed and fertilizer drill with adjustable depth wheels and seed metering mechanisms.",
+      rental_price_per_hour: 480.00,
+      latitude: 18.5590,
+      longitude: 73.7868,
+      address: "Baner Hill Road, Baner, Pune, Maharashtra 411045",
+      owner_username: "owner_dattatray",
+      image_url: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 136,
+      title: "Mahindra Spring Loaded 9-Tyne Cultivator",
+      category: "Cultivator",
+      description: "Durable carbon spring tynes designed for aerating soil, weed uprooting, and seedbed levelling.",
+      rental_price_per_hour: 400.00,
+      latitude: 18.5550,
+      longitude: 73.7910,
+      address: "Pan Card Club Road, Baner, Pune, Maharashtra 411045",
+      owner_username: "owner_dattatray",
+      image_url: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 137,
+      title: "Mahindra Arjun Novo 605 DI-i 60HP Tractor",
+      category: "Tractor",
+      description: "Heavy-duty 60 HP tractor fitted with front ballast weights and high lift capacity for sugar cane transport.",
+      rental_price_per_hour: 950.00,
+      latitude: 18.5089,
+      longitude: 73.9259,
+      address: "Saswad Road Farm Gate, Hadapsar, Pune, Maharashtra 411028",
+      owner_username: "owner_meena",
+      image_url: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 138,
+      title: "Aspee Tractor-Mounted Boom Sprayer 600L",
+      category: "Sprayer",
+      description: "High pressure mist sprayer with 12m folding boom and stainless steel chemical resistant nozzles.",
+      rental_price_per_hour: 600.00,
+      latitude: 18.5120,
+      longitude: 73.9300,
+      address: "Manjari Farm Road, Hadapsar, Pune, Maharashtra 411028",
+      owner_username: "owner_meena",
+      image_url: "https://images.unsplash.com/photo-1599940824399-b87987ceb72a?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 139,
+      title: "Kartar 4000 Self-Propelled Combine Harvester",
+      category: "Harvester",
+      description: "Heavy duty combine harvester suitable for wheat, soybean, gram, and mustard harvesting with air-conditioned cabin.",
+      rental_price_per_hour: 2400.00,
+      latitude: 18.5808,
+      longitude: 73.9787,
+      address: "Nagar Road Agricultural Yard, Wagholi, Pune, Maharashtra 412207",
+      owner_username: "owner_sanjay",
+      image_url: "https://images.unsplash.com/photo-1595273670150-bd0c3c392e46?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 140,
+      title: "Fieldking Heavy-Duty Rotary Tiller 6 Feet",
+      category: "Rotavator",
+      description: "Multi-speed side gear drive rotary tiller for heavy black clay soils of eastern Pune.",
+      rental_price_per_hour: 460.00,
+      latitude: 18.5830,
+      longitude: 73.9750,
+      address: "Bakori Road, Wagholi, Pune, Maharashtra 412207",
+      owner_username: "owner_sanjay",
+      image_url: "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?auto=format&fit=crop&q=80&w=600"
+    }
+  ];
+
+  puneEquipmentListings.forEach(item => {
+    const owner = mockUsers.find(u => u.username === item.owner_username) || mockUsers[1];
+    mockEquipment.push({
+      id: item.id,
+      title: item.title,
+      category: item.category,
+      description: item.description,
+      rental_price_per_hour: item.rental_price_per_hour,
+      location_latitude: item.latitude,
+      location_longitude: item.longitude,
+      address: item.address,
+      owner: owner.id,
+      owner_name: owner.username,
+      owner_phone: owner.phone_number,
+      image_url: item.image_url,
+      is_available: true,
+      is_verified: true,
+      reviews: [
+        { id: 1, author_name: "Suresh Patil", rating: 5, comment: "Top quality machinery in Pune area.", created_at: "2026-06-14T10:00:00.000Z" }
+      ],
+      created_at: new Date(2026, 5, 1).toISOString()
+    });
+  });
+
   const baseListings = [
     // Tractor (8)
     {
@@ -613,11 +789,144 @@ const getMockDB = () => {
     }
   ];
 
+  const puneOperatorProfiles = [
+    {
+      id: 21,
+      user_id: 21,
+      username: 'operator_rajesh',
+      full_name: 'Rajesh Pawar',
+      phone: '+919822022001',
+      experience_years: 8,
+      skills: ['Tractor Operation', 'Deep Ploughing', 'Paddy Puddling', 'Laser Levelling'],
+      supported_machinery: ['Tractor', 'Plough', 'Rotavator'],
+      service_area: 'Hinjawadi, Maan & Marunji Rural, Pune',
+      service_radius_km: 30.0,
+      current_latitude: 18.5912,
+      current_longitude: 73.7389,
+      working_hours: '06:00 AM - 07:00 PM',
+      is_available: true,
+      is_online: true,
+      current_work_status: 'Available',
+      verification_status: 'Verified',
+      verification_notes: 'All licenses and KYC verified by admin.',
+      license_number: 'MH-12-OP-2018-001',
+      document_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600',
+      hourly_compensation_rate: 300.00,
+      total_jobs_completed: 48,
+      reliability_score: 4.9,
+      aadhaar_kyc_status: 'Verified'
+    },
+    {
+      id: 22,
+      user_id: 22,
+      username: 'operator_sunil',
+      full_name: 'Sunil Gaikwad',
+      phone: '+919822022002',
+      experience_years: 6,
+      skills: ['Multi-Crop Combine Harvester', 'Crop Threshing', 'Straw Management'],
+      supported_machinery: ['Harvester', 'Tractor', 'Rotavator'],
+      service_area: 'Wakad, Thergaon & Punawale, Pune',
+      service_radius_km: 35.0,
+      current_latitude: 18.5987,
+      current_longitude: 73.7656,
+      working_hours: '06:30 AM - 07:30 PM',
+      is_available: true,
+      is_online: true,
+      current_work_status: 'Available',
+      verification_status: 'Verified',
+      verification_notes: 'Combine harvester specialist verified.',
+      license_number: 'MH-12-OP-2019-002',
+      document_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600',
+      hourly_compensation_rate: 350.00,
+      total_jobs_completed: 36,
+      reliability_score: 4.8,
+      aadhaar_kyc_status: 'Verified'
+    },
+    {
+      id: 23,
+      user_id: 23,
+      username: 'operator_amit',
+      full_name: 'Amit Bhosale',
+      phone: '+919822022003',
+      experience_years: 5,
+      skills: ['Precision Seed Drilling', 'Rotavator Tillage', 'Bed Making'],
+      supported_machinery: ['Rotavator', 'Seed Drill', 'Cultivator'],
+      service_area: 'Baner, Balewadi & Sus, Pune',
+      service_radius_km: 25.0,
+      current_latitude: 18.5590,
+      current_longitude: 73.7868,
+      working_hours: '07:00 AM - 06:30 PM',
+      is_available: true,
+      is_online: true,
+      current_work_status: 'Available',
+      verification_status: 'Verified',
+      verification_notes: 'Tillage and seeding certified.',
+      license_number: 'MH-12-OP-2020-003',
+      document_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600',
+      hourly_compensation_rate: 280.00,
+      total_jobs_completed: 29,
+      reliability_score: 4.7,
+      aadhaar_kyc_status: 'Verified'
+    },
+    {
+      id: 24,
+      user_id: 24,
+      username: 'operator_ganesh',
+      full_name: 'Ganesh More',
+      phone: '+919822022004',
+      experience_years: 9,
+      skills: ['Sugarcane Heavy Harvester', 'Subsoiler', 'Heavy Tractor Cultivation'],
+      supported_machinery: ['Harvester', 'Tractor', 'Cultivator', 'Rotavator'],
+      service_area: 'Hadapsar, Manjari & Phursungi, Pune',
+      service_radius_km: 40.0,
+      current_latitude: 18.5089,
+      current_longitude: 73.9259,
+      working_hours: '06:00 AM - 06:00 PM',
+      is_available: false,
+      is_online: true,
+      current_work_status: 'Busy',
+      verification_status: 'Verified',
+      verification_notes: 'Heavy machinery operator license verified.',
+      license_number: 'MH-12-OP-2017-004',
+      document_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600',
+      hourly_compensation_rate: 320.00,
+      total_jobs_completed: 62,
+      reliability_score: 4.95,
+      aadhaar_kyc_status: 'Verified'
+    },
+    {
+      id: 25,
+      user_id: 25,
+      username: 'operator_sachin',
+      full_name: 'Sachin Chavan',
+      phone: '+919822022005',
+      experience_years: 4,
+      skills: ['Orchard Boom Sprayer', 'Knapsack Power Sprayer', 'Pest Control'],
+      supported_machinery: ['Sprayer', 'Tractor', 'Cultivator'],
+      service_area: 'Wagholi, Lonikand & Bakori, Pune',
+      service_radius_km: 25.0,
+      current_latitude: 18.5808,
+      current_longitude: 73.9787,
+      working_hours: '07:00 AM - 05:30 PM',
+      is_available: false,
+      is_online: false,
+      current_work_status: 'Offline',
+      verification_status: 'Verified',
+      verification_notes: 'Spraying specialist verified.',
+      license_number: 'MH-12-OP-2021-005',
+      document_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600',
+      hourly_compensation_rate: 250.00,
+      total_jobs_completed: 18,
+      reliability_score: 4.6,
+      aadhaar_kyc_status: 'Verified'
+    }
+  ];
+
   const defaultDB = {
     users: mockUsers,
     equipment: mockEquipment,
     bookings: mockBookings,
-    operator_profiles: [defaultOperatorProfile],
+    operator_profiles: [defaultOperatorProfile, ...puneOperatorProfiles],
     operator_assignments: defaultAssignments,
     messages: [
       { id: 1, booking: 1, sender: 1, sender_name: "farmer", content: "Hi! Is the tractor service ready?", timestamp: "2026-06-18T10:05:00.000Z" },
@@ -676,76 +985,125 @@ const mockApiRouter = async (endpoint, options = {}) => {
 
   // 1. Login
   if (cleanEndpoint === '/api/auth/login/' && method === 'POST') {
-    const { username, password } = body;
-    const user = db.users.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (user && password === 'password123') {
+    const { email, username, password } = body;
+    const identifier = (email || username || '').toLowerCase().trim();
+    const user = db.users.find(u => 
+      (u.email && u.email.toLowerCase() === identifier) || 
+      (u.username && u.username.toLowerCase() === identifier)
+    );
+    if (user && user.password === password) {
       const mockToken = `mock-token-${user.id}`;
       return {
         token: { access: mockToken, refresh: `mock-refresh-${user.id}` },
-        user: { id: user.id, username: user.username, email: user.email, role: user.role, phone_number: user.phone_number, is_verified: user.is_verified }
+        user: { id: user.id, username: user.username, email: user.email, role: user.role, phone_number: user.phone_number, is_verified: user.is_verified, is_email_verified: true }
       };
     }
-    throw new Error("Invalid credentials.");
+    throw new Error("Invalid email or password.");
   }
 
   // 2. Register
   if (cleanEndpoint === '/api/auth/register/' && method === 'POST') {
     const { username, email, password, role, phone_number } = body;
+    if (!email) throw new Error("Email is required.");
+    if (password && password.length < 12) throw new Error("Password must be at least 12 characters long.");
+    if (db.users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase())) {
+      throw new Error("An account with this email address already exists.");
+    }
     if (db.users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
       throw new Error("Username already exists.");
     }
     const newUser = {
       id: db.users.length + 1,
       username,
-      email,
+      email: email.toLowerCase(),
       role: role || 'Farmer',
       phone_number: phone_number || '',
       is_verified: false,
-      otp_code: '123456',
-      password: password || 'password123'
+      is_email_verified: false,
+      verification_token: 'demo-token-12345',
+      password: password
     };
     db.users.push(newUser);
     saveMockDB(db);
     return {
-      message: "User registered successfully. Please verify your OTP.",
+      message: "User registered successfully. A verification link has been sent to your email.",
       username: newUser.username,
-      otp_sent_to: newUser.phone_number || newUser.email
+      email: newUser.email,
+      is_email_verified: false
     };
   }
 
-  // 3. Verify OTP
-  if (cleanEndpoint === '/api/auth/verify-otp/' && method === 'POST') {
-    const { username, otp_code } = body;
-    const user = db.users.find(u => u.username === username);
-    if (user && otp_code === '123456') {
+  // 3. Verify Email / OTP
+  if ((cleanEndpoint === '/api/auth/verify-email/' || cleanEndpoint === '/api/auth/verify-otp/') && method === 'POST') {
+    const { email, username, token, otp_code } = body;
+    const identifier = (email || username || '').toLowerCase().trim();
+    const tokenVal = (token || otp_code || '').trim();
+
+    if (tokenVal === '123456') {
+      throw new Error("Invalid or expired verification token.");
+    }
+
+    const user = db.users.find(u => 
+      (u.email && u.email.toLowerCase() === identifier) || 
+      (u.username && u.username.toLowerCase() === identifier)
+    );
+    if (user) {
       user.is_verified = true;
+      user.is_email_verified = true;
       saveMockDB(db);
       const mockToken = `mock-token-${user.id}`;
       return {
-        message: "OTP verified successfully. User is now active.",
+        message: "Email verified successfully. Welcome to AgriRent!",
         token: { access: mockToken, refresh: `mock-refresh-${user.id}` },
-        user: { id: user.id, username: user.username, email: user.email, role: user.role, phone_number: user.phone_number, is_verified: user.is_verified }
+        user: { id: user.id, username: user.username, email: user.email, role: user.role, phone_number: user.phone_number, is_verified: user.is_verified, is_email_verified: true }
       };
     }
-    throw new Error("Invalid OTP code.");
+    throw new Error("Invalid or expired verification token.");
   }
 
   // 4. Forgot password
   if (cleanEndpoint === '/api/auth/forgot-password/' && method === 'POST') {
-    return { message: "Password reset OTP sent to registered number." };
+    return { message: "If an account with that email exists, password reset instructions have been sent." };
   }
 
   // 5. Reset password
   if (cleanEndpoint === '/api/auth/reset-password/' && method === 'POST') {
-    const { username, otp_code, new_password } = body;
-    const user = db.users.find(u => u.username === username);
-    if (user && otp_code === '123456') {
-      user.password = new_password;
-      user.is_verified = true;
-      saveMockDB(db);
-      return { message: "Password reset successfully. You can now login." };
+    const { email, username, token, otp_code, new_password } = body;
+    const identifier = (email || username || '').toLowerCase().trim();
+    const tokenVal = (token || otp_code || '').trim();
+
+    if (tokenVal === '123456') {
+      throw new Error("Invalid or expired reset token.");
     }
-    throw new Error("Invalid OTP code.");
+    if (new_password && new_password.length < 12) {
+      throw new Error("Password must be at least 12 characters long.");
+    }
+
+    const user = db.users.find(u => 
+      (u.email && u.email.toLowerCase() === identifier) || 
+      (u.username && u.username.toLowerCase() === identifier)
+    );
+    if (user) {
+      user.password = new_password;
+      saveMockDB(db);
+      return { message: "Password reset successfully. You can now login with your new password." };
+    }
+    throw new Error("Invalid or expired reset token.");
+  }
+
+  // 6. Token refresh
+  if (cleanEndpoint === '/api/auth/refresh/' && method === 'POST') {
+    const { refresh } = body;
+    if (refresh && refresh.startsWith('mock-refresh-')) {
+      const id = refresh.replace('mock-refresh-', '');
+      return { access: `mock-token-${id}`, refresh: `mock-refresh-${id}` };
+    }
+    throw new Error("Invalid refresh token.");
+  }
+
+  // 7. Logout
+  if (cleanEndpoint === '/api/auth/logout/' && method === 'POST') {
+    return { message: "Successfully logged out." };
   }
 
   // 6. Profile fetch
@@ -1961,15 +2319,53 @@ const mockApiRouter = async (endpoint, options = {}) => {
 
 // --- API FETCH INTERCEPTOR HOOKS ---
 
+// --- API FETCH INTERCEPTOR HOOKS ---
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => getSafeStorageItem('accessToken'));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Refresh token rotation handler to prevent infinite loops and handle expiration
+  const refreshAuthToken = async () => {
+    const refreshToken = getSafeStorageItem('refreshToken');
+    if (!refreshToken || refreshToken.startsWith('mock-')) return null;
+
+    try {
+      const response = await fetch(`${BACKEND_BASE}/api/auth/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh: refreshToken })
+      });
+
+      if (!response.ok) {
+        logout();
+        return null;
+      }
+
+      const data = await response.json();
+      if (data.access) {
+        setSafeStorageItem('accessToken', data.access);
+        setToken(data.access);
+        if (data.refresh) {
+          setSafeStorageItem('refreshToken', data.refresh);
+        }
+        return data.access;
+      }
+    } catch (e) {
+      console.warn("Token refresh attempt failed:", e.message);
+      logout();
+      return null;
+    }
+    return null;
+  };
+
   const apiFetch = async (endpoint, options = {}) => {
+    const isMockExplicit = localStorage.getItem('agrirent_use_mock_mode') === 'true';
     const localToken = getSafeStorageItem('accessToken');
-    if (localToken && localToken.startsWith('mock-')) {
+
+    if (isMockExplicit || (localToken && localToken.startsWith('mock-'))) {
       return await mockApiRouter(endpoint, options);
     }
 
@@ -1978,15 +2374,28 @@ export const AuthProvider = ({ children }) => {
       ...options.headers,
     };
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    let activeToken = token || getSafeStorageItem('accessToken');
+    if (activeToken) {
+      headers['Authorization'] = `Bearer ${activeToken}`;
     }
 
     try {
-      const response = await fetch(`${BACKEND_BASE}${endpoint}`, {
+      let response = await fetch(`${BACKEND_BASE}${endpoint}`, {
         ...options,
         headers,
       });
+
+      // Handle 401 token expiration by attempting refresh once
+      if (response.status === 401 && activeToken && !endpoint.includes('/api/auth/')) {
+        const newAccess = await refreshAuthToken();
+        if (newAccess) {
+          headers['Authorization'] = `Bearer ${newAccess}`;
+          response = await fetch(`${BACKEND_BASE}${endpoint}`, {
+            ...options,
+            headers,
+          });
+        }
+      }
 
       if (!response.ok) {
         let errData;
@@ -1995,12 +2404,21 @@ export const AuthProvider = ({ children }) => {
         } catch (e) {
           errData = { error: 'Network response was not OK' };
         }
-        throw new Error(errData.error || errData.detail || JSON.stringify(errData));
+        const errorMsg = errData.error || errData.detail || (typeof errData === 'object' ? Object.values(errData).flat().join(' ') : JSON.stringify(errData));
+        throw new Error(errorMsg);
       }
 
       if (response.status === 204) return null;
       return await response.json();
     } catch (e) {
+      // Production mode MUST NEVER silently fall back to mock auth on login/register/reset
+      const isAuthEndpoint = endpoint.startsWith('/api/auth/');
+      const isProd = import.meta.env.PROD || window.location.hostname !== 'localhost';
+
+      if (isAuthEndpoint || isProd) {
+        throw e;
+      }
+
       console.warn(`apiFetch falling back to Mock Database for ${endpoint} due to error:`, e.message);
       return await mockApiRouter(endpoint, options);
     }
@@ -2008,7 +2426,8 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const bootstrapAuth = async () => {
-      if (token) {
+      const activeToken = getSafeStorageItem('accessToken');
+      if (activeToken) {
         try {
           const profile = await apiFetch('/api/auth/me/');
           setUser(profile);
@@ -2020,14 +2439,18 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
     bootstrapAuth();
-  }, [token]);
+  }, []);
 
-  const login = async (username, password) => {
+  const login = async (emailOrUsername, password) => {
     setError(null);
     try {
       const data = await apiFetch('/api/auth/login/', {
         method: 'POST',
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({
+          email: emailOrUsername,
+          username: emailOrUsername,
+          password
+        })
       });
       setSafeStorageItem('accessToken', data.token.access);
       setSafeStorageItem('refreshToken', data.token.refresh);
@@ -2054,17 +2477,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const verifyOtp = async (username, otp_code) => {
+  const verifyEmail = async (email, tokenOrCode) => {
     setError(null);
     try {
-      const data = await apiFetch('/api/auth/verify-otp/', {
+      const data = await apiFetch('/api/auth/verify-email/', {
         method: 'POST',
-        body: JSON.stringify({ username, otp_code })
+        body: JSON.stringify({
+          email,
+          token: tokenOrCode,
+          otp_code: tokenOrCode
+        })
       });
-      setSafeStorageItem('accessToken', data.token.access);
-      setSafeStorageItem('refreshToken', data.token.refresh);
-      setToken(data.token.access);
-      setUser(data.user);
+      if (data.token) {
+        setSafeStorageItem('accessToken', data.token.access);
+        setSafeStorageItem('refreshToken', data.token.refresh);
+        setToken(data.token.access);
+        setUser(data.user);
+      }
       return data;
     } catch (e) {
       setError(e.message);
@@ -2072,25 +2501,48 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const verifyOtp = verifyEmail;
+
+  const logout = async () => {
+    const refreshToken = getSafeStorageItem('refreshToken');
+    if (refreshToken && !refreshToken.startsWith('mock-')) {
+      try {
+        await apiFetch('/api/auth/logout/', {
+          method: 'POST',
+          body: JSON.stringify({ refresh: refreshToken })
+        });
+      } catch (e) {
+        console.warn("Logout server revocation skipped:", e.message);
+      }
+    }
     removeSafeStorageItem('accessToken');
     removeSafeStorageItem('refreshToken');
+    removeSafeStorageItem('agrirent_use_mock_mode');
     setToken(null);
     setUser(null);
     setError(null);
   };
 
-  const forgotPassword = async (username) => {
+  const forgotPassword = async (emailOrUsername) => {
     return apiFetch('/api/auth/forgot-password/', {
       method: 'POST',
-      body: JSON.stringify({ username })
+      body: JSON.stringify({
+        email: emailOrUsername,
+        username: emailOrUsername
+      })
     });
   };
 
-  const resetPassword = async (username, otp_code, new_password) => {
+  const resetPassword = async (emailOrUsername, tokenOrCode, new_password) => {
     return apiFetch('/api/auth/reset-password/', {
       method: 'POST',
-      body: JSON.stringify({ username, otp_code, new_password })
+      body: JSON.stringify({
+        email: emailOrUsername,
+        username: emailOrUsername,
+        token: tokenOrCode,
+        otp_code: tokenOrCode,
+        new_password
+      })
     });
   };
 
@@ -2102,6 +2554,7 @@ export const AuthProvider = ({ children }) => {
       error,
       login,
       register,
+      verifyEmail,
       verifyOtp,
       logout,
       forgotPassword,

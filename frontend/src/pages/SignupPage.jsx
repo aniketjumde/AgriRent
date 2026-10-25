@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Tractor, User, Mail, Phone, Lock, Eye, AlertCircle, RefreshCw } from 'lucide-react';
+import { Tractor, User, Mail, Phone, Lock, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export default function SignupPage({ onNavigate }) {
-  const { register, verifyOtp } = useAuth();
+  const { register, verifyEmail } = useAuth();
   const { t } = useLanguage();
 
   // Signup form inputs
@@ -15,8 +15,8 @@ export default function SignupPage({ onNavigate }) {
   const [role, setRole] = useState('Farmer');
 
   // Flow control states
-  const [otpVerifyScreen, setOtpVerifyScreen] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
+  const [verifyScreen, setVerifyScreen] = useState(false);
+  const [verificationToken, setVerificationToken] = useState('');
 
   // UI status
   const [loading, setLoading] = useState(false);
@@ -25,31 +25,40 @@ export default function SignupPage({ onNavigate }) {
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    if (!username || !password || !phone) return;
+    if (!username || !email || !password) {
+      setErrorMsg("Username, email, and password are required.");
+      return;
+    }
+    if (password.length < 12) {
+      setErrorMsg("Password must be at least 12 characters long.");
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
     try {
       await register(username, email, password, role, phone);
-      setOtpVerifyScreen(true);
-      setInfoMsg("Registration successful! A simulated 6-digit OTP code has been dispatched. (Use code: '123456')");
+      setVerifyScreen(true);
+      setInfoMsg("Registration successful! A secure verification link and code has been sent to your email.");
     } catch (e) {
-      setErrorMsg(e.message || "Registration failed. Username may already be taken.");
+      setErrorMsg(e.message || "Registration failed. Check if username or email is already taken.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOtpVerify = async (e) => {
+  const handleVerify = async (e) => {
     e.preventDefault();
-    if (!otpCode) return;
+    if (!verificationToken) {
+      setErrorMsg("Please enter the verification code sent to your email.");
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
     try {
-      await verifyOtp(username, otpCode);
-      setInfoMsg(t('verificationSuccess'));
-      // The session updates and the App router automatically takes the user inside the dashboard.
+      await verifyEmail(email, verificationToken);
+      setInfoMsg(t('verificationSuccess') || "Email verified successfully! Redirecting...");
     } catch (e) {
-      setErrorMsg(e.message || "Invalid OTP code. Try entering '123456'.");
+      setErrorMsg(e.message || "Invalid or expired verification token.");
     } finally {
       setLoading(false);
     }
@@ -79,14 +88,14 @@ export default function SignupPage({ onNavigate }) {
         )}
 
         {infoMsg && (
-          <div className="px-4 py-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2 mb-5 animate-pulse-subtle">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <div className="px-4 py-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2 mb-5">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
             <span>{infoMsg}</span>
           </div>
         )}
 
         {/* 1. Register input details screen */}
-        {!otpVerifyScreen ? (
+        {!verifyScreen ? (
           <form onSubmit={handleRegisterSubmit} className="space-y-4">
             <div>
               <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Username</label>
@@ -106,13 +115,14 @@ export default function SignupPage({ onNavigate }) {
             </div>
 
             <div>
-              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Email (Optional)</label>
+              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Email Address (Required)</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                   <Mail className="w-4 h-4" />
                 </span>
                 <input
                   type="email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter email address"
@@ -129,7 +139,6 @@ export default function SignupPage({ onNavigate }) {
                 </span>
                 <input
                   type="tel"
-                  required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="e.g. +91 98765 43210"
@@ -139,7 +148,7 @@ export default function SignupPage({ onNavigate }) {
             </div>
 
             <div>
-              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Password</label>
+              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Password (Min 12 Characters)</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                   <Lock className="w-4 h-4" />
@@ -147,9 +156,10 @@ export default function SignupPage({ onNavigate }) {
                 <input
                   type="password"
                   required
+                  minLength={12}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create password"
+                  placeholder="Create secure password (12+ chars)"
                   className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
                 />
               </div>
@@ -216,41 +226,44 @@ export default function SignupPage({ onNavigate }) {
             </div>
           </form>
         ) : (
-          /* 2. OTP Verification Screen */
-          <form onSubmit={handleOtpVerify} className="space-y-6">
+          /* 2. Verification Token Screen */
+          <form onSubmit={handleVerify} className="space-y-6">
             <div className="text-center space-y-2">
-              <h3 className="font-extrabold text-lg text-slate-800 dark:text-slate-100">{t('otpVerification')}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{t('otpPrompt')}</p>
+              <h3 className="font-extrabold text-lg text-slate-800 dark:text-slate-100">Verify Your Email</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Please enter the verification token or code sent to <strong className="text-emerald-600">{email}</strong>.
+              </p>
             </div>
 
             <div>
               <input
                 type="text"
                 required
-                maxLength={6}
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
-                placeholder="Enter 6-digit OTP code"
-                className="w-full py-3.5 text-center text-xl tracking-widest font-black rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700"
+                value={verificationToken}
+                onChange={(e) => setVerificationToken(e.target.value)}
+                placeholder="Enter verification code or token"
+                className="w-full py-3.5 text-center text-sm font-mono tracking-wider font-bold rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+              className="w-full py-3.5 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-              {t('verify')}
+              Verify & Enter Dashboard
             </button>
 
-            <button
-              type="button"
-              onClick={() => setOtpVerifyScreen(false)}
-              className="w-full text-center text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:underline"
-            >
-              Back to Details Form
-            </button>
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setVerifyScreen(false)}
+                className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+              >
+                Change Registration Details
+              </button>
+            </div>
           </form>
         )}
 

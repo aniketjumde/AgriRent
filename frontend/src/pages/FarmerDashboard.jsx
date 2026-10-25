@@ -91,11 +91,25 @@ export default function FarmerDashboard() {
   const [requiresOperator, setRequiresOperator] = useState(false);
   const [paymentsList, setPaymentsList] = useState([]);
   
+  // Pune Pre-configured Farmer Locations
+  const PUNE_FARM_PRESETS = {
+    'farmer_suresh': { latitude: 18.5912, longitude: 73.7389, address: "Suresh Patil Farm, Maan, Hinjawadi, Pune (14.5 Acres, Sugarcane/Paddy)" },
+    'farmer_anita': { latitude: 18.5987, longitude: 73.7656, address: "Anita Deshmukh Farm, Kaspate Wasti, Wakad, Pune (8.2 Acres, Wheat/Vegetables)" },
+    'farmer_vikram': { latitude: 18.5590, longitude: 73.7868, address: "Vikram Shinde Farm, Sus Road, Baner, Pune (22.0 Acres, Soybean/Gram)" },
+    'farmer_priya': { latitude: 18.5089, longitude: 73.9259, address: "Priya Kadam Farm, Manjari, Hadapsar, Pune (6.5 Acres, Floriculture/Vegetables)" },
+    'farmer_ramesh': { latitude: 18.5808, longitude: 73.9787, address: "Ramesh Jadhav Farm, Bakori Road, Wagholi, Pune (18.0 Acres, Sugarcane/Bajra)" }
+  };
+
   // GPS & Nearby Machinery State
-  const [farmerLocation, setFarmerLocation] = useState({
-    latitude: 11.0168,
-    longitude: 76.9558,
-    address: "Coimbatore Agri Cluster, Tamil Nadu"
+  const [farmerLocation, setFarmerLocation] = useState(() => {
+    if (user && user.username && PUNE_FARM_PRESETS[user.username]) {
+      return PUNE_FARM_PRESETS[user.username];
+    }
+    return {
+      latitude: 18.5912,
+      longitude: 73.7389,
+      address: "Hinjawadi Agri Cluster, Pune, Maharashtra"
+    };
   });
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState(null);
@@ -322,10 +336,14 @@ export default function FarmerDashboard() {
     fetchNearbyEquipment(farmerLocation, searchRadiusKm, categoryFilter, maxPriceFilter, availabilityFilter, sortByFilter);
   }, [farmerLocation.latitude, farmerLocation.longitude, searchRadiusKm, categoryFilter, maxPriceFilter, availabilityFilter, sortByFilter]);
 
-  // Initial GPS prompt
+  // Initial GPS prompt & profile-based location setup
   useEffect(() => {
-    requestBrowserGps();
-  }, []);
+    if (user && user.username && PUNE_FARM_PRESETS[user.username]) {
+      setFarmerLocation(PUNE_FARM_PRESETS[user.username]);
+    } else {
+      requestBrowserGps();
+    }
+  }, [user?.username]);
 
   // Cart operations
   const handleAddToCart = (item) => {

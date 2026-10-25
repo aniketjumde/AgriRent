@@ -134,8 +134,8 @@ export default function OperatorDashboard() {
 
     const timer = setInterval(async () => {
       try {
-        const currentLat = selectedJob.current_operator_lat || 11.0250;
-        const currentLng = selectedJob.current_operator_lng || 76.9620;
+        const currentLat = selectedJob.current_operator_lat || profile?.current_latitude || 18.5912;
+        const currentLng = selectedJob.current_operator_lng || profile?.current_longitude || 73.7389;
         
         const isHeadingPickup = ['ACCEPTED', 'TRAVELLING_TO_PICKUP', 'ARRIVED_AT_PICKUP'].includes(selectedJob.status);
         const targetLat = isHeadingPickup ? parseFloat(selectedJob.pickup_latitude) : parseFloat(selectedJob.destination_latitude);
