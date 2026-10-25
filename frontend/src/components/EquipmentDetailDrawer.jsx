@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { X, CheckCircle, Shield, Award, Fuel, MapPin, Star, Calendar, Clock, Truck, UserCheck, AlertCircle, ShoppingBag } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, CheckCircle, Shield, Award, Fuel, MapPin, Star, Calendar, Clock, Truck, UserCheck, AlertCircle, ShoppingBag, RefreshCw, Zap } from 'lucide-react';
 
 export default function EquipmentDetailDrawer({
   equipment,
   userLocation,
   onClose,
   onAddToCart,
-  onDirectBook
+  onDirectBook,
+  apiFetch
 }) {
   if (!equipment) return null;
 
@@ -24,29 +25,81 @@ export default function EquipmentDetailDrawer({
   const [deliveryOption, setDeliveryOption] = useState('Pickup'); // 'Pickup' or 'Delivery'
   const [insuranceOptIn, setInsuranceOptIn] = useState(true);
 
-  // Dynamic cost calculation
-  const hourlyRate = parseFloat(equipment.rental_price_per_hour || 1200);
+  // Dynamic Quote State from Backend Engine
+  const [quoteData, setQuoteData] = useState(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState(null);
+
+  const hourlyRate = parseFloat(equipment.rental_price_per_hour || 800);
   const dailyRate = parseFloat(equipment.rental_price_per_day || (hourlyRate * 8));
 
-  const rentalBase = rentalType === 'daily'
-    ? dailyRate * duration
-    : hourlyRate * duration;
+  // Fetch real-time authoritative dynamic quote from server
+  useEffect(() => {
+    let isMounted = true;
+    const fetchQuote = async () => {
+      if (!apiFetch || !equipment?.id) return;
+      setQuoteLoading(true);
+      setQuoteError(null);
 
-  const operatorCost = requiresOperator
-    ? (350 * (rentalType === 'daily' ? duration : Math.max(1, Math.ceil(duration / 8))))
-    : 0;
+      const sDate = new Date(startDate);
+      const eDate = new Date(sDate.getTime() + (rentalType === 'daily' ? duration * 24 * 3600000 : duration * 3600000));
 
-  const deliveryCost = deliveryOption === 'Delivery'
-    ? (equipment.delivery_charge_estimate || 500)
-    : 0;
+      try {
+        const res = await apiFetch('/api/pricing/quote/', {
+          method: 'POST',
+          body: JSON.stringify({
+            equipment_id: equipment.id,
+            farmer_lat: userLocation?.latitude || 18.5204,
+            farmer_lng: userLocation?.longitude || 73.8567,
+            start_date: sDate.toISOString(),
+            end_date: eDate.toISOString(),
+            rental_type: rentalType,
+            duration: duration,
+            acreage: acreage,
+            farming_operation: farmingOperation,
+            requires_operator: requiresOperator,
+            delivery_option: deliveryOption,
+            insurance_opt_in: insuranceOptIn
+          })
+        });
+        if (isMounted) {
+          setQuoteData(res);
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.warn("Dynamic pricing quote fetch failed:", err);
+          setQuoteError(err.message);
+        }
+      } finally {
+        if (isMounted) setQuoteLoading(false);
+      }
+    };
 
-  const insuranceCost = insuranceOptIn
-    ? (150 * (rentalType === 'daily' ? duration : Math.max(1, Math.ceil(duration / 24))))
-    : 0;
+    fetchQuote();
+    return () => { isMounted = false; };
+  }, [
+    equipment?.id,
+    userLocation?.latitude,
+    userLocation?.longitude,
+    startDate,
+    rentalType,
+    duration,
+    acreage,
+    farmingOperation,
+    requiresOperator,
+    deliveryOption,
+    insuranceOptIn
+  ]);
 
-  const subtotal = rentalBase + operatorCost + deliveryCost + insuranceCost;
-  const taxGst = Math.round(subtotal * 0.05);
-  const totalEstimate = subtotal + taxGst;
+  // Fallback calculations if backend quote is loading
+  const rentalBase = quoteData?.pricing_breakdown?.raw_base_rental ?? (rentalType === 'daily' ? dailyRate * duration : hourlyRate * duration);
+  const adjustedRental = quoteData?.pricing_breakdown?.adjusted_rental ?? rentalBase;
+  const operatorCost = quoteData?.pricing_breakdown?.operator_charges ?? (requiresOperator ? (150 * (rentalType === 'daily' ? duration * 8 : duration)) : 0);
+  const deliveryCost = quoteData?.pricing_breakdown?.transport_charges ?? (deliveryOption === 'Delivery' ? (equipment.delivery_charge_estimate || 250) : 0);
+  const insuranceCost = quoteData?.pricing_breakdown?.insurance_charges ?? (insuranceOptIn ? (150 * (rentalType === 'daily' ? duration : Math.max(1, Math.ceil(duration / 24)))) : 0);
+  const discounts = quoteData?.pricing_breakdown?.total_discounts ?? 0;
+  const taxGst = quoteData?.pricing_breakdown?.taxes_amount ?? Math.round((adjustedRental + operatorCost + deliveryCost + insuranceCost - discounts) * 0.05);
+  const totalEstimate = quoteData?.pricing_breakdown?.estimated_total ?? (adjustedRental + operatorCost + deliveryCost + insuranceCost + taxGst - discounts);
 
   const handleAddCart = () => {
     const sDate = new Date(startDate);
@@ -54,11 +107,14 @@ export default function EquipmentDetailDrawer({
 
     const cartItem = {
       id: `cart_${equipment.id}_${Date.now()}`,
+      quote_id: quoteData?.quote_id,
+      quote_expires_at: quoteData?.quote_expires_at,
       equipment_id: equipment.id,
       equipment_title: equipment.title,
       equipment_category: equipment.category,
       equipment_image: equipment.image || equipment.image_url,
-      owner_name: equipment.owner_name || 'Verified Machine Owner',
+      owner_name: equipment.owner_name || equipment.owner?.username || 'Verified Machine Owner',
+      owner_rating: equipment.average_rating || 4.8,
       farming_operation: farmingOperation,
       acreage: acreage,
       rental_type: rentalType,
@@ -74,6 +130,11 @@ export default function EquipmentDetailDrawer({
       delivery_charge: deliveryCost,
       insurance_opt_in: insuranceOptIn,
       insurance_charge: insuranceCost,
+      season_name: quoteData?.pricing_breakdown?.season_name,
+      seasonal_factor: quoteData?.pricing_breakdown?.seasonal_factor,
+      demand_factor: quoteData?.pricing_breakdown?.demand_factor,
+      demand_level: quoteData?.pricing_breakdown?.demand_level,
+      duration_discount_amount: discounts,
       gst_tax: taxGst,
       item_total: totalEstimate,
       estimated_cost: totalEstimate
@@ -96,105 +157,103 @@ export default function EquipmentDetailDrawer({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 text-xs text-slate-700 dark:text-slate-300">
-          {/* Machine Header Banner */}
-          <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+          {/* Machine Header & Image */}
+          <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 h-48 sm:h-56">
             <img
-              src={equipment.image || equipment.image_url || 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?w=300'}
+              src={equipment.image_url || equipment.image || 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?w=600'}
               alt={equipment.title}
-              className="w-full sm:w-44 h-32 rounded-2xl object-cover border border-slate-200 dark:border-slate-800 shadow-sm"
+              className="w-full h-full object-cover"
             />
-            <div className="flex-1 space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 rounded-md font-bold text-[10px]">
-                  {equipment.effective_available ?? equipment.is_available ? 'Available Now' : 'Reserved'}
-                </span>
-                {equipment.distance_km !== undefined && (
-                  <span className="px-2 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 rounded-md font-bold text-[10px]">
-                    📍 {equipment.distance_km} km away
-                  </span>
-                )}
-              </div>
-              <h2 className="text-lg font-black text-slate-900 dark:text-white leading-tight">
-                {equipment.title}
-              </h2>
-              <p className="text-[11px] text-slate-500 flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                {equipment.address || 'Local Hub Hub, Coimbatore Rural'}
-              </p>
-              <div className="flex items-center gap-3 pt-1 text-[11px]">
-                <span className="flex items-center gap-1 font-bold text-amber-600">
-                  <Star className="w-3.5 h-3.5 fill-amber-500" />
-                  {equipment.average_rating || '4.8'} (26 reviews)
-                </span>
-                <span>•</span>
-                <span className="text-slate-500">
-                  Owner: <strong className="text-slate-800 dark:text-slate-200">{equipment.owner_name || 'Verified Owner'}</strong>
-                </span>
-              </div>
+            <div className="absolute top-3 right-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-emerald-600 shadow-md">
+              ₹{hourlyRate}/hr • ₹{dailyRate}/day
             </div>
+            {equipment.distance_km !== undefined && (
+              <div className="absolute bottom-3 left-3 bg-blue-600/90 text-white backdrop-blur-md px-3 py-1 rounded-lg text-xs font-bold shadow-md flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{equipment.distance_km} km away</span>
+              </div>
+            )}
           </div>
 
-          {/* Pricing Ribbon */}
-          <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-            <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase block">Hourly Rental</span>
-              <strong className="text-base text-emerald-600 dark:text-emerald-400">₹{hourlyRate}</strong>
-              <span className="text-[10px] text-slate-400"> / hour</span>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase block">Daily Shift (8 hrs)</span>
-              <strong className="text-base text-slate-900 dark:text-white">₹{dailyRate}</strong>
-              <span className="text-[10px] text-slate-400"> / day</span>
-            </div>
-          </div>
-
-          {/* Machine Specifications */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Specifications & Condition</h4>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="p-2.5 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-100 dark:border-slate-800">
-                <Fuel className="w-4 h-4 mx-auto text-amber-500 mb-1" />
-                <span className="text-[10px] text-slate-400 block">Fuel Efficiency</span>
-                <strong className="text-xs text-slate-800 dark:text-slate-200">{equipment.fuel_efficiency || 4.2} L/hr</strong>
-              </div>
-              <div className="p-2.5 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-100 dark:border-slate-800">
-                <Shield className="w-4 h-4 mx-auto text-blue-500 mb-1" />
-                <span className="text-[10px] text-slate-400 block">Maintenance</span>
-                <strong className="text-xs text-emerald-600 font-bold">100% Inspected</strong>
-              </div>
-              <div className="p-2.5 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-100 dark:border-slate-800">
-                <Award className="w-4 h-4 mx-auto text-purple-500 mb-1" />
-                <span className="text-[10px] text-slate-400 block">Telemetry</span>
-                <strong className="text-xs text-purple-600 font-bold">IoT Active</strong>
-              </div>
-            </div>
-            <p className="text-[11px] text-slate-500 leading-relaxed pt-1">
-              {equipment.description || 'Modern agricultural machinery maintained in prime condition with up-to-date service history and verified field readiness.'}
+          <div>
+            <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight">
+              {equipment.title}
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+              {equipment.description || "High performance agricultural machinery with multi-purpose implements."}
             </p>
           </div>
 
+          {/* Owner & Hub specs */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2 border-y border-slate-100 dark:border-slate-800 text-xs">
+            <div className="p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
+              <span className="text-[10px] text-slate-400 block font-bold uppercase">Owner</span>
+              <strong className="text-slate-800 dark:text-slate-200">{equipment.owner_name || equipment.owner?.username || 'Owner'}</strong>
+            </div>
+            <div className="p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
+              <span className="text-[10px] text-slate-400 block font-bold uppercase">Rating</span>
+              <strong className="text-amber-500 flex items-center gap-1">★ {equipment.average_rating || 4.8}</strong>
+            </div>
+            <div className="p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
+              <span className="text-[10px] text-slate-400 block font-bold uppercase">Location</span>
+              <strong className="text-slate-800 dark:text-slate-200 truncate block">{equipment.address || 'Pune'}</strong>
+            </div>
+            <div className="p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
+              <span className="text-[10px] text-slate-400 block font-bold uppercase">Status</span>
+              <strong className="text-emerald-600 font-black">
+                {equipment.effective_available ?? equipment.is_available ? '● Available' : '○ Busy'}
+              </strong>
+            </div>
+          </div>
+
+          {/* Dynamic Pricing Engine Live Indicator */}
+          {quoteData?.pricing_breakdown && (
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 border border-emerald-500/20 text-xs space-y-1.5 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                  <Zap className="w-4 h-4 text-amber-500" />
+                  Dynamic Pricing Engine (Live Marketplace)
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                  {quoteData.pricing_breakdown.demand_level}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                🌱 <strong>{quoteData.pricing_breakdown.season_name}</strong>: {quoteData.pricing_breakdown.seasonal_reason}
+              </p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                📊 <strong>Cluster Pressure</strong>: {quoteData.pricing_breakdown.demand_reason}
+              </p>
+              {quoteData.pricing_breakdown.total_discounts > 0 && (
+                <p className="text-[11px] text-emerald-600 font-bold">
+                  🎁 Volume Discount: -₹{quoteData.pricing_breakdown.total_discounts} ({quoteData.pricing_breakdown.duration_discount_reason})
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Smart Booking Configurator */}
-          <div className="border border-emerald-100 dark:border-emerald-950/50 bg-emerald-50/20 dark:bg-emerald-950/10 rounded-2xl p-4 sm:p-5 space-y-4">
-            <h4 className="text-xs font-black uppercase text-emerald-700 dark:text-emerald-400 tracking-wider flex items-center gap-1.5">
-              <span>🌾</span> Configure Your Farm Job Parameters
+          <div className="space-y-3.5 bg-slate-50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <h4 className="font-black text-sm text-slate-800 dark:text-slate-200">
+              Configure Agricultural Rental Parameters
             </h4>
 
             {/* Farming Operation & Acreage */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Target Farming Operation</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Farming Operation</label>
                 <select
                   value={farmingOperation}
                   onChange={(e) => setFarmingOperation(e.target.value)}
-                  className="w-full mt-1 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold"
+                  className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-800 dark:text-slate-200"
                 >
                   <option>Land Preparation / Plowing</option>
                   <option>Sowing / Direct Seeding</option>
@@ -206,47 +265,45 @@ export default function EquipmentDetailDrawer({
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Cultivated Farm Acreage</label>
-                <div className="flex items-center gap-2 mt-1">
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0.5"
-                    value={acreage}
-                    onChange={(e) => setAcreage(parseFloat(e.target.value) || 1)}
-                    className="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold"
-                  />
-                  <span className="text-xs font-bold text-slate-500">Acres</span>
-                </div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Farm Acreage (Acres)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0.5"
+                  max="100"
+                  value={acreage}
+                  onChange={(e) => setAcreage(parseFloat(e.target.value) || 1)}
+                  className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-800 dark:text-slate-200"
+                />
               </div>
             </div>
 
             {/* Rental Type & Duration */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Rental Type</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Rental Billing Type</label>
                 <div className="grid grid-cols-2 gap-1.5 mt-1">
                   <button
                     type="button"
-                    onClick={() => { setRentalType('hourly'); setDuration(4); }}
-                    className={`py-2 rounded-xl text-xs font-bold border ${
+                    onClick={() => setRentalType('hourly')}
+                    className={`py-2 rounded-xl text-xs font-bold transition-all border ${
                       rentalType === 'hourly'
                         ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
-                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600'
                     }`}
                   >
-                    Hourly
+                    Hourly Rate
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setRentalType('daily'); setDuration(1); }}
-                    className={`py-2 rounded-xl text-xs font-bold border ${
+                    onClick={() => setRentalType('daily')}
+                    className={`py-2 rounded-xl text-xs font-bold transition-all border ${
                       rentalType === 'daily'
                         ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
-                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600'
                     }`}
                   >
-                    Daily (8 hrs)
+                    Daily Shift (8h)
                   </button>
                 </div>
               </div>
@@ -261,7 +318,7 @@ export default function EquipmentDetailDrawer({
                   max={rentalType === 'daily' ? 30 : 72}
                   value={duration}
                   onChange={(e) => setDuration(parseInt(e.target.value) || 1)}
-                  className="w-full mt-1 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold"
+                  className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-800 dark:text-slate-200"
                 />
               </div>
             </div>
@@ -273,18 +330,18 @@ export default function EquipmentDetailDrawer({
                 type="datetime-local"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full mt-1 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold"
+                className="w-full mt-1 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-800 dark:text-slate-200"
               />
             </div>
 
-            {/* Operator and Delivery Checkboxes */}
-            <div className="space-y-2 pt-2 border-t border-emerald-100 dark:border-emerald-950/60">
+            {/* Toggles: Operator, Flatbed, Insurance */}
+            <div className="space-y-2 pt-1">
               <label className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer">
                 <div className="flex items-center gap-2">
                   <UserCheck className="w-4 h-4 text-emerald-600" />
                   <div>
                     <span className="font-bold text-xs text-slate-800 dark:text-slate-200 block">Certified Machine Operator</span>
-                    <span className="text-[10px] text-slate-400">Includes verified skilled driver (+₹350/shift)</span>
+                    <span className="text-[10px] text-slate-400">Trained & insured operator dispatched (+₹150/hr or ₹1200/day)</span>
                   </div>
                 </div>
                 <input
@@ -299,8 +356,8 @@ export default function EquipmentDetailDrawer({
                 <div className="flex items-center gap-2">
                   <Truck className="w-4 h-4 text-blue-600" />
                   <div>
-                    <span className="font-bold text-xs text-slate-800 dark:text-slate-200 block">Farm-Gate Flatbed Delivery</span>
-                    <span className="text-[10px] text-slate-400">Delivered directly to your field coordinate (+₹500)</span>
+                    <span className="font-bold text-xs text-slate-800 dark:text-slate-200 block">Farm-Gate Flatbed Transport</span>
+                    <span className="text-[10px] text-slate-400">Delivered directly to your field coordinate (₹20/km)</span>
                   </div>
                 </div>
                 <input
@@ -328,38 +385,60 @@ export default function EquipmentDetailDrawer({
               </label>
             </div>
 
-            {/* Estimated Total Breakdown Card */}
-            <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1 text-xs">
-              <div className="flex justify-between text-slate-500">
+            {/* Estimated Total Itemized Breakdown Card */}
+            <div className="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs">
+              <div className="flex justify-between items-center text-slate-500">
                 <span>Base Machinery Rental:</span>
-                <span>₹{rentalBase}</span>
+                <span className="font-semibold">₹{rentalBase}</span>
               </div>
+              {quoteData?.pricing_breakdown?.demand_adjustment !== 0 && (
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Market & Seasonal Adjustment:</span>
+                  <span className={`font-semibold ${(quoteData?.pricing_breakdown?.demand_adjustment || 0) >= 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                    {(quoteData?.pricing_breakdown?.demand_adjustment || 0) >= 0 ? '+' : ''}₹{quoteData?.pricing_breakdown?.demand_adjustment}
+                  </span>
+                </div>
+              )}
               {requiresOperator && (
-                <div className="flex justify-between text-slate-500">
+                <div className="flex justify-between items-center text-slate-500">
                   <span>Operator Charge:</span>
-                  <span>₹{operatorCost}</span>
+                  <span className="font-semibold">₹{operatorCost}</span>
                 </div>
               )}
               {deliveryOption === 'Delivery' && (
-                <div className="flex justify-between text-slate-500">
-                  <span>Logistics / Delivery:</span>
-                  <span>₹{deliveryCost}</span>
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Logistics & Transport:</span>
+                  <span className="font-semibold">₹{deliveryCost}</span>
                 </div>
               )}
               {insuranceOptIn && (
-                <div className="flex justify-between text-slate-500">
+                <div className="flex justify-between items-center text-slate-500">
                   <span>Comprehensive Insurance:</span>
-                  <span>₹{insuranceCost}</span>
+                  <span className="font-semibold">₹{insuranceCost}</span>
                 </div>
               )}
-              <div className="flex justify-between text-slate-500">
+              {discounts > 0 && (
+                <div className="flex justify-between items-center text-emerald-600 font-bold">
+                  <span>Duration Discounts:</span>
+                  <span>-₹{discounts}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center text-slate-500">
                 <span>GST Tax (5%):</span>
-                <span>₹{taxGst}</span>
+                <span className="font-semibold">₹{taxGst}</span>
               </div>
-              <div className="flex justify-between font-black text-sm text-slate-900 dark:text-white pt-2 border-t border-slate-100 dark:border-slate-800">
-                <span>Estimated Total:</span>
-                <span className="text-emerald-600 dark:text-emerald-400">₹{totalEstimate}</span>
+              <div className="flex justify-between items-center font-black text-sm text-slate-900 dark:text-white pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-1.5">
+                  <span>Estimated Total:</span>
+                  {quoteLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />}
+                </div>
+                <span className="text-base text-emerald-600 dark:text-emerald-400 font-black">
+                  ₹{totalEstimate}
+                </span>
               </div>
+              <p className="text-[10px] text-slate-400 text-right pt-0.5">
+                *Itemized estimate dynamically calculated by backend engine.
+              </p>
             </div>
           </div>
         </div>
@@ -368,7 +447,8 @@ export default function EquipmentDetailDrawer({
         <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-3">
           <button
             onClick={handleAddCart}
-            className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all"
+            disabled={quoteLoading}
+            className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-50"
           >
             <ShoppingBag className="w-4 h-4" />
             <span>Add to Smart Booking Cart</span>

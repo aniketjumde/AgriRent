@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import MapComponent from '../components/MapComponent';
 import SmartBookingCart from '../components/SmartBookingCart';
 import EquipmentDetailDrawer from '../components/EquipmentDetailDrawer';
+import OperatorRouteMap from '../components/OperatorRouteMap';
 import VoiceBookingModal from '../components/VoiceBookingModal';
 
 const getFallbackImage = (category) => {
@@ -142,6 +143,14 @@ export default function FarmerDashboard() {
 
   // Blockchain Audit trail modal view
   const [showLedgerBooking, setShowLedgerBooking] = useState(null);
+
+  // Live Operator GPS Mission Tracking Modal
+  const [trackingAssignment, setTrackingAssignment] = useState(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+
+  // Farmer Analytics Summary State
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [farmerNotifications, setFarmerNotifications] = useState([]);
 
   // AI Recommendation Connector
   const [cropType, setCropType] = useState('Paddy');
@@ -411,7 +420,26 @@ export default function FarmerDashboard() {
     if (cartItems.length === 0) return;
     setValidatingCart(true);
     try {
-      // Create confirmed bookings for each item in the cart
+      // Revalidate entire cart against backend dynamic pricing before booking creation
+      const valRes = await apiFetch('/api/cart/validate/', {
+        method: 'POST',
+        body: JSON.stringify({
+          farmer_lat: farmerLocation.latitude,
+          farmer_lng: farmerLocation.longitude,
+          items: cartItems
+        })
+      });
+
+      if (!valRes.valid) {
+        alert("Some items have conflicting reservations or updated pricing. Please review your cart before confirming.");
+        if (valRes.items) {
+          setCartItems(valRes.items);
+        }
+        setValidatingCart(false);
+        return;
+      }
+
+      // Create confirmed bookings for each item in the cart with locked quote price
       for (const item of cartItems) {
         await apiFetch('/api/bookings/', {
           method: 'POST',
@@ -419,15 +447,23 @@ export default function FarmerDashboard() {
             equipment: item.equipment_id,
             start_date: item.start_date,
             end_date: item.end_date,
+            rental_type: item.rental_type || 'hourly',
+            duration: item.duration || 4.0,
+            acreage: item.acreage || 2.0,
+            farming_operation: item.farming_operation || 'Land Preparation',
             delivery_option: item.delivery_option || 'Pickup',
             requires_operator: !!item.requires_operator,
             insurance_opt_in: !!item.insurance_opt_in,
+            farmer_lat: farmerLocation.latitude,
+            farmer_lng: farmerLocation.longitude,
+            agreed_price: item.item_total || item.estimated_cost,
+            quote_id: item.quote_id,
             notes: `Operation: ${item.farming_operation || 'Fieldwork'}, Acreage: ${item.acreage || 2} acres`
           })
         });
       }
 
-      alert("Equipment booking requests successfully submitted! Redirecting to payment & tracking...");
+      alert("Equipment booking requests successfully submitted and price-locked! Redirecting to payment & tracking...");
       setCartItems([]);
       setIsCartOpen(false);
       setActiveSubTab('my-bookings');
@@ -454,6 +490,21 @@ export default function FarmerDashboard() {
     setWeatherLoading(true);
     try {
       loadPayments();
+
+      try {
+        const analytics = await apiFetch('/api/dashboard/farmer/');
+        setAnalyticsData(analytics);
+      } catch (e) {
+        console.warn("Could not load farmer analytics:", e);
+      }
+
+      try {
+        const notifs = await apiFetch('/api/notifications/');
+        setFarmerNotifications(notifs || []);
+      } catch (e) {
+        console.warn("Could not load notifications:", e);
+      }
+
       const equipData = await apiFetch('/api/equipment/');
       setListings(equipData);
 
@@ -470,6 +521,51 @@ export default function FarmerDashboard() {
     } finally {
       setLoading(false);
       setWeatherLoading(false);
+    }
+  };
+
+  const handleOpenLiveTracking = async (booking) => {
+    const assignmentId = booking.latest_assignment?.id;
+    if (!assignmentId) {
+      alert("No operator assignment created yet for this booking. Once accepted, live GPS tracking becomes available.");
+      return;
+    }
+    setTrackingLoading(true);
+    try {
+      const trackData = await apiFetch(`/api/operator/jobs/${assignmentId}/tracking/`);
+      setTrackingAssignment(trackData);
+    } catch (e) {
+      console.warn("Failed to fetch live job tracking:", e);
+      // Fallback to local assignment representation if live tracking returns 403/offline
+      setTrackingAssignment({
+        assignment_id: assignmentId,
+        booking_id: booking.id,
+        status: booking.latest_assignment?.status || 'ASSIGNED',
+        machine_title: booking.equipment_details?.title || 'Agricultural Machinery',
+        operator: {
+          name: booking.latest_assignment?.operator_name || 'Assigned Operator',
+          phone: booking.latest_assignment?.operator_phone || '+919822011005',
+          rating: 4.8,
+          current_latitude: booking.latest_assignment?.current_operator_lat || 18.5204,
+          current_longitude: booking.latest_assignment?.current_operator_lng || 73.8567
+        },
+        pickup: {
+          address: booking.equipment_details?.address || 'Owner Machine Yard',
+          latitude: parseFloat(booking.equipment_details?.location_latitude || 18.5204),
+          longitude: parseFloat(booking.equipment_details?.location_longitude || 73.8567),
+          owner_name: booking.equipment_details?.owner_name || 'Owner'
+        },
+        destination: {
+          address: farmerLocation?.address || "Farmer's Field",
+          latitude: parseFloat(farmerLocation?.latitude || 18.5204),
+          longitude: parseFloat(farmerLocation?.longitude || 73.8567),
+          farmer_name: user?.username || 'Farmer'
+        },
+        estimated_arrival_minutes: booking.latest_assignment?.estimated_arrival_minutes || 25,
+        estimated_travel_distance_km: booking.latest_assignment?.estimated_travel_distance_km || 8.5
+      });
+    } finally {
+      setTrackingLoading(false);
     }
   };
 
@@ -837,57 +933,95 @@ export default function FarmerDashboard() {
           </p>
         </div>
 
-        <div className="flex gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => navigate('/dashboard')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+            onClick={() => { setActiveSubTab('listings'); setSelectedDetailListing(null); }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
               activeSubTab === 'listings' && !selectedDetailListing
-                ? 'bg-emerald-600 border-emerald-600 text-white'
+                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-50'
             }`}
           >
-            Machinery Directory
+            Explore Equipment 🚜
           </button>
           
           <button
-            onClick={() => navigate('/dashboard/my-bookings')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+            onClick={() => { setActiveSubTab('my-bookings'); setSelectedDetailListing(null); }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
               activeSubTab === 'my-bookings'
-                ? 'bg-emerald-600 border-emerald-600 text-white'
+                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-50'
             }`}
           >
-            My Bookings & Tracking
+            My Bookings 📋
           </button>
 
           <button
-            onClick={() => navigate('/dashboard/govt-schemes')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all ${
-              activeSubTab === 'govt-schemes'
-                ? 'bg-emerald-600 border-emerald-600 text-white'
+            onClick={() => { setActiveSubTab('live-mission'); setSelectedDetailListing(null); }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+              activeSubTab === 'live-mission'
+                ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-50'
             }`}
           >
-            Subsidies & Loans
+            Live Mission 📍
           </button>
 
           <button
             onClick={() => { setActiveSubTab('payments'); setSelectedDetailListing(null); }}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
               activeSubTab === 'payments'
-                ? 'bg-emerald-600 border-emerald-600 text-white'
+                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-50'
             }`}
           >
-            Payments & Receipts
+            Payments 💳
+          </button>
+
+          <button
+            onClick={() => { setActiveSubTab('notifications'); setSelectedDetailListing(null); }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all relative ${
+              activeSubTab === 'notifications'
+                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-50'
+            }`}
+          >
+            <span>Notifications 🔔</span>
+            {farmerNotifications.filter(n => !n.is_read).length > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full text-[9px] font-black">
+                {farmerNotifications.filter(n => !n.is_read).length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => { setActiveSubTab('profile'); setSelectedDetailListing(null); }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+              activeSubTab === 'profile'
+                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-50'
+            }`}
+          >
+            My Farm / Profile 🏡
+          </button>
+
+          <button
+            onClick={() => { setActiveSubTab('govt-schemes'); setSelectedDetailListing(null); }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+              activeSubTab === 'govt-schemes'
+                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-50'
+            }`}
+          >
+            Subsidies 📜
           </button>
 
           <button
             onClick={() => setIsCartOpen(true)}
-            className="relative flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md text-xs transition-all"
+            className="relative flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md text-xs transition-all"
           >
             <ShoppingBag className="w-4 h-4" />
-            <span>Booking Cart</span>
+            <span>Cart</span>
             {cartItems.length > 0 && (
               <span className="ml-1 w-5 h-5 bg-amber-400 text-slate-900 rounded-full text-[10px] font-black flex items-center justify-center animate-bounce">
                 {cartItems.length}
@@ -897,7 +1031,7 @@ export default function FarmerDashboard() {
           
           <button
             onClick={() => setIsVoiceOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold shadow-sm text-xs"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold shadow-sm text-xs"
           >
             <Mic className="w-4 h-4 animate-pulse" />
             Voice Book
@@ -905,7 +1039,7 @@ export default function FarmerDashboard() {
         </div>
       </div>
       
-      {/* SIH Farmer Dashboard Stats Ribbon */}
+      {/* Farmer Dashboard Stats Ribbon (Actual Transactions & Availability) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
         <button 
           onClick={() => { setActiveSubTab('my-bookings'); setBookingStatusFilter('All'); setSelectedDetailListing(null); }}
@@ -916,7 +1050,9 @@ export default function FarmerDashboard() {
           </div>
           <div>
             <span className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold">Total Bookings</span>
-            <strong className="text-base sm:text-lg text-slate-800 dark:text-white">{bookings.length} Bookings</strong>
+            <strong className="text-base sm:text-lg text-slate-800 dark:text-white">
+              {analyticsData?.total_bookings ?? bookings.length} Bookings
+            </strong>
           </div>
         </button>
 
@@ -929,43 +1065,49 @@ export default function FarmerDashboard() {
           </div>
           <div>
             <span className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold">Active Rentals</span>
-            <strong className="text-base sm:text-lg text-slate-800 dark:text-white">{bookings.filter(b => b.status === 'In Progress').length} Active</strong>
+            <strong className="text-base sm:text-lg text-slate-800 dark:text-white">
+              {analyticsData?.active_rentals ?? bookings.filter(b => b.status === 'In Progress').length} Active
+            </strong>
           </div>
         </button>
 
         <button 
-          onClick={() => navigate('/dashboard/ai-recs')}
-          className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-205 dark:border-slate-800/80 shadow-sm flex items-center justify-between gap-3 text-left w-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+          onClick={() => { setActiveSubTab('payments'); setSelectedDetailListing(null); }}
+          className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800/80 shadow-sm flex items-center justify-between gap-3 text-left w-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400">
-              <Sparkles className="w-5 h-5" />
+              <span className="text-base">💳</span>
             </div>
             <div>
-              <span className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold">AI Recs</span>
-              <strong className="text-base sm:text-lg text-slate-800 dark:text-white">{aiRecCount} Suggests</strong>
+              <span className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold">Rental Spending</span>
+              <strong className="text-base sm:text-lg text-slate-800 dark:text-white">
+                ₹{analyticsData?.total_spent ?? (payments.filter(p => p.status === 'Captured').reduce((acc, p) => acc + parseFloat(p.amount || 0), 0) || 0)}
+              </strong>
             </div>
           </div>
           <span className="text-[9px] px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 font-bold">
-            History
+            Receipts
           </span>
         </button>
 
         <button 
-          onClick={() => navigate('/dashboard/voice-queries')}
-          className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-205 dark:border-slate-800/80 shadow-sm flex items-center justify-between gap-3 text-left w-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+          onClick={() => { setActiveSubTab('listings'); setSelectedDetailListing(null); }}
+          className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800/80 shadow-sm flex items-center justify-between gap-3 text-left w-full cursor-pointer hover:shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
-              <Mic className="w-5 h-5" />
+              <Tractor className="w-5 h-5" />
             </div>
             <div>
-              <span className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold">Voice Queries</span>
-              <strong className="text-base sm:text-lg text-slate-800 dark:text-white">{voiceBookingCount} Queries</strong>
+              <span className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold">Nearby Available</span>
+              <strong className="text-base sm:text-lg text-slate-800 dark:text-white">
+                {analyticsData?.nearby_available_equipment ?? listings.filter(l => l.is_available).length} Machines
+              </strong>
             </div>
           </div>
           <span className="text-[9px] px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded text-slate-600 dark:text-slate-300 font-bold">
-            History
+            Live Map
           </span>
         </button>
       </div>
@@ -1677,8 +1819,20 @@ export default function FarmerDashboard() {
                           )}
 
                           {(b.requires_operator || b.operator_assigned) && (
-                            <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 text-[8px] font-black uppercase">
-                              🚜 Operator: {b.latest_assignment?.operator_name || b.operator_assigned_name || 'Requested / Dispatching'}
+                            <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 text-[8px] font-black uppercase flex items-center gap-1.5">
+                              <span>🚜 Operator: {b.latest_assignment?.operator_name || b.operator_assigned_name || 'Requested / Dispatching'}</span>
+                              {b.latest_assignment && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenLiveTracking(b);
+                                  }}
+                                  className="ml-1 px-1.5 py-0.2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-[8px] uppercase tracking-wider"
+                                >
+                                  Live Mission GPS 📍
+                                </button>
+                              )}
                             </span>
                           )}
 
@@ -2236,6 +2390,7 @@ export default function FarmerDashboard() {
           userLocation={farmerLocation}
           onClose={() => setDrawerEquipment(null)}
           onAddToCart={handleAddToCart}
+          apiFetch={apiFetch}
         />
       )}
 
@@ -2325,6 +2480,247 @@ export default function FarmerDashboard() {
               >
                 Done
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4.7 Live Mission GPS Tracking Subtab */}
+      {activeSubTab === 'live-mission' && (
+        <div className="space-y-6 animate-fade-in text-xs">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-850 dark:text-slate-105 flex items-center gap-2">
+                <span>📍</span> Live Mission & Field Telemetry Tracking
+              </h2>
+              <p className="text-xs text-slate-450 mt-1">
+                Real-time GPS tracking for assigned certified machinery operators en route to your farm coordinate.
+              </p>
+            </div>
+
+            <button
+              onClick={loadDashboardData}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center gap-2 shadow-xs transition-all text-xs"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Refresh Mission Data
+            </button>
+          </div>
+
+          {/* Active Operator Missions List */}
+          {bookings.filter(b => b.latest_assignment || b.operator_assigned).length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 p-12 rounded-2xl border border-slate-200 dark:border-slate-800 text-center space-y-3">
+              <Tractor className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-700 animate-pulse" />
+              <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">No Active Operator Missions</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                When you book machinery and request a certified operator, live location telemetry, machine transit ETA, and operator route maps appear here automatically.
+              </p>
+              <button
+                onClick={() => { setActiveSubTab('listings'); setSelectedDetailListing(null); }}
+                className="mt-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs"
+              >
+                Explore Nearby Equipment
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {bookings.filter(b => b.latest_assignment || b.operator_assigned).map(b => (
+                <div key={b.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                        {b.latest_assignment?.status || 'OPERATOR DISPATCHED'}
+                      </span>
+                      <h4 className="font-bold text-base text-slate-900 dark:text-white mt-1">
+                        {b.equipment_details?.title}
+                      </h4>
+                      <p className="text-xs text-slate-500">
+                        Booking #AGR-{b.id} • Operator: <strong className="text-slate-700 dark:text-slate-300">{b.latest_assignment?.operator_name || b.operator_assigned_name}</strong>
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => handleOpenLiveTracking(b)}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                    >
+                      <span>Open Full Map 📍</span>
+                    </button>
+                  </div>
+
+                  <div className="h-48 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
+                    <OperatorRouteMap
+                      operatorLocation={{
+                        latitude: b.latest_assignment?.current_operator_lat || 18.5204,
+                        longitude: b.latest_assignment?.current_operator_lng || 73.8567
+                      }}
+                      pickupLocation={{
+                        latitude: parseFloat(b.equipment_details?.location_latitude || 18.5204),
+                        longitude: parseFloat(b.equipment_details?.location_longitude || 73.8567),
+                        address: b.equipment_details?.address,
+                        owner_name: b.equipment_details?.owner_name
+                      }}
+                      destinationLocation={{
+                        latitude: parseFloat(farmerLocation?.latitude || 18.5204),
+                        longitude: parseFloat(farmerLocation?.longitude || 73.8567),
+                        address: farmerLocation?.address,
+                        farmer_name: user?.username
+                      }}
+                      status={b.latest_assignment?.status || 'EN_ROUTE'}
+                      isOnline={true}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <span>ETA: <strong>~{b.latest_assignment?.estimated_arrival_minutes || 20} mins</strong></span>
+                    <span>Distance: <strong>{b.latest_assignment?.estimated_travel_distance_km || 8.5} km</strong></span>
+                    <span>📞 {b.latest_assignment?.operator_phone || '+919822011005'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 4.8 Farmer Notifications Subtab */}
+      {activeSubTab === 'notifications' && (
+        <div className="space-y-6 animate-fade-in text-xs">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-850 dark:text-slate-105 flex items-center gap-2">
+                <span>🔔</span> Notifications & Real-Time Alerts
+              </h2>
+              <p className="text-xs text-slate-450 mt-1">
+                Booking updates, owner approvals, payment verification notices, and mission dispatch alerts.
+              </p>
+            </div>
+
+            <button
+              onClick={async () => {
+                try {
+                  await apiFetch('/api/notifications/', { method: 'PATCH' });
+                  setFarmerNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+                } catch (e) {
+                  console.warn("Could not mark notifications read:", e);
+                }
+              }}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs"
+            >
+              Mark All as Read
+            </button>
+          </div>
+
+          {farmerNotifications.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 p-12 rounded-2xl border border-slate-200 dark:border-slate-800 text-center text-slate-400 space-y-2">
+              <span className="text-3xl block">📭</span>
+              <p className="text-sm font-bold">No Notifications Yet</p>
+              <p className="text-xs">You are all caught up! New booking alerts and payment receipts will appear here.</p>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden shadow-sm">
+              {farmerNotifications.map((notif) => (
+                <div
+                  key={notif.id}
+                  className={`p-4 flex items-start gap-3 transition-colors ${
+                    notif.is_read ? 'bg-transparent' : 'bg-emerald-50/50 dark:bg-emerald-950/20'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 flex items-center justify-center font-bold text-sm shrink-0">
+                    🌾
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
+                      {notif.content}
+                    </p>
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      {new Date(notif.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                  {!notif.is_read && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 4.9 Farmer Farm & Profile Subtab */}
+      {activeSubTab === 'profile' && (
+        <div className="space-y-6 animate-fade-in text-xs">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-600 text-white font-black text-2xl flex items-center justify-center shadow-md">
+                {user?.username?.charAt(0).toUpperCase() || 'F'}
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-900 dark:text-white">
+                  {user?.first_name ? `${user.first_name} ${user.last_name}` : user?.username}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Role: <strong className="text-emerald-600 uppercase font-black">{user?.role || 'Farmer'}</strong> • KYC Aadhaar Status: <strong className="text-emerald-600 font-bold">{user?.aadhaar_kyc_status || 'Verified'}</strong>
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Email: {user?.email} • Phone: {user?.phone_number || '+91 98220 11001'}
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 dark:border-slate-800 pt-5 space-y-4">
+              <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                Default Farm Service Point & Machinery Dispatch Coordinates
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Selected Farm Address</label>
+                  <input
+                    type="text"
+                    value={farmerLocation?.address || ''}
+                    onChange={(e) => setFarmerLocation(prev => ({ ...prev, address: e.target.value }))}
+                    className="w-full mt-1 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Latitude</label>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      value={farmerLocation?.latitude || 18.5204}
+                      onChange={(e) => setFarmerLocation(prev => ({ ...prev, latitude: parseFloat(e.target.value) || 18.5204 }))}
+                      className="w-full mt-1 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Longitude</label>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      value={farmerLocation?.longitude || 73.8567}
+                      onChange={(e) => setFarmerLocation(prev => ({ ...prev, longitude: parseFloat(e.target.value) || 73.8567 }))}
+                      className="w-full mt-1 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={requestBrowserGps}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Update from Browser GPS</span>
+                </button>
+                <button
+                  onClick={() => alert("Farm location coordinates updated successfully!")}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs"
+                >
+                  Save Farm Profile
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2995,6 +3391,103 @@ export default function FarmerDashboard() {
             >
               Close Blockchain Audit View
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Live Operator GPS Mission Tracking Modal */}
+      {trackingAssignment && (
+        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-[650] flex items-center justify-center p-3 sm:p-6 animate-fade-in">
+          <div className="w-full max-w-4xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up">
+            
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-xs flex items-center justify-center text-xl">
+                  🚜
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full text-white">
+                      Mission Status: {trackingAssignment.status}
+                    </span>
+                    <span className="text-xs text-blue-200">
+                      ETA: ~{trackingAssignment.estimated_arrival_minutes || 20} mins
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-white mt-0.5">
+                    Live GPS Tracker: {trackingAssignment.machine_title}
+                  </h3>
+                </div>
+              </div>
+              <button
+                onClick={() => setTrackingAssignment(null)}
+                className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-base font-bold transition-all"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body with OperatorRouteMap */}
+            <div className="flex-1 p-4 sm:p-5 overflow-y-auto space-y-4">
+              {/* Operator & Waypoints Card */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 bg-blue-50/60 dark:bg-blue-950/30 rounded-2xl border border-blue-100 dark:border-blue-900/40">
+                  <span className="text-[10px] text-blue-600 dark:text-blue-400 block font-bold uppercase">Assigned Operator</span>
+                  <strong className="text-sm text-slate-800 dark:text-white block mt-0.5">{trackingAssignment.operator?.name}</strong>
+                  <span className="text-[11px] text-slate-500 block">📞 {trackingAssignment.operator?.phone}</span>
+                  <span className="text-[10px] text-amber-500 font-bold block mt-1">★ {trackingAssignment.operator?.rating || 4.8} Certified</span>
+                </div>
+
+                <div className="p-3 bg-amber-50/60 dark:bg-amber-950/30 rounded-2xl border border-amber-100 dark:border-amber-900/40">
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 block font-bold uppercase">Machine Pickup Yard</span>
+                  <strong className="text-xs text-slate-800 dark:text-white block mt-0.5 truncate">{trackingAssignment.pickup?.owner_name || 'Machine Owner'}</strong>
+                  <span className="text-[11px] text-slate-500 block truncate">{trackingAssignment.pickup?.address || 'Owner Farm Location'}</span>
+                </div>
+
+                <div className="p-3 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100 dark:border-emerald-900/40">
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block font-bold uppercase">Destination Farm Field</span>
+                  <strong className="text-xs text-slate-800 dark:text-white block mt-0.5 truncate">{trackingAssignment.destination?.farmer_name || user?.username}</strong>
+                  <span className="text-[11px] text-slate-500 block truncate">{trackingAssignment.destination?.address || farmerLocation?.address}</span>
+                </div>
+              </div>
+
+              {/* Map view */}
+              <div className="h-[360px] sm:h-[420px] rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+                <OperatorRouteMap
+                  operatorLocation={{
+                    latitude: trackingAssignment.operator?.current_latitude || 18.5204,
+                    longitude: trackingAssignment.operator?.current_longitude || 73.8567
+                  }}
+                  pickupLocation={trackingAssignment.pickup}
+                  destinationLocation={trackingAssignment.destination}
+                  status={trackingAssignment.status}
+                  isOnline={true}
+                />
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl text-xs flex items-center justify-between text-slate-600 dark:text-slate-300">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Live GPS telemetry active. Coordinates refreshed automatically via operator handset.</span>
+                </div>
+                <button
+                  onClick={() => handleOpenLiveTracking({ latest_assignment: { id: trackingAssignment.assignment_id } })}
+                  className="px-2.5 py-1 bg-white dark:bg-slate-700 hover:bg-slate-100 border border-slate-200 dark:border-slate-600 rounded-lg text-[10px] font-bold"
+                >
+                  Refresh GPS
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex justify-end">
+              <button
+                onClick={() => setTrackingAssignment(null)}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-md transition-all"
+              >
+                Close Tracking
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Trash2, Edit3, CheckCircle, AlertTriangle, ChevronRight, X, Shield, UserCheck, Truck, RefreshCw, Calendar, Clock, MapPin } from 'lucide-react';
+import { ShoppingCart, Trash2, Edit3, CheckCircle, AlertTriangle, ChevronRight, X, Shield, UserCheck, Truck, RefreshCw, Calendar, Clock, MapPin, Zap } from 'lucide-react';
 
 export default function SmartBookingCart({
   cartItems,
@@ -53,7 +53,7 @@ export default function SmartBookingCart({
               title="Revalidate slots & rates from backend"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${validating ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Verify Rates</span>
+              <span className="hidden sm:inline">Refresh Pricing</span>
             </button>
           )}
           {cartItems.length > 0 && (
@@ -245,7 +245,7 @@ export default function SmartBookingCart({
                           onChange={(e) => setEditFormData({ ...editFormData, delivery_option: e.target.checked ? 'Delivery' : 'Pickup' })}
                           className="rounded text-emerald-600 focus:ring-emerald-500"
                         />
-                        <span className="font-semibold text-slate-700 dark:text-slate-300">Farm Gate Delivery (+₹500)</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">Farm Gate Delivery</span>
                       </label>
                     </div>
 
@@ -265,11 +265,11 @@ export default function SmartBookingCart({
                     </div>
                   </div>
                 ) : (
-                  /* Item Breakdown View */
-                  <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-800/60 text-xs space-y-1.5">
+                  /* Item Breakdown View with Transparent Multipliers */
+                  <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-800/60 text-xs space-y-2">
                     <div className="flex items-center justify-between text-slate-500 text-[11px]">
                       <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5" />
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
                         {new Date(item.start_date).toLocaleDateString()} {new Date(item.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       <span>
@@ -277,28 +277,38 @@ export default function SmartBookingCart({
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px] text-slate-600 dark:text-slate-400">
+                    {/* Dynamic Breakdown Table */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px] text-slate-600 dark:text-slate-400 bg-white/60 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
                       <div>
-                        <span className="block text-slate-400 text-[9px] uppercase">Base Rental</span>
+                        <span className="block text-slate-400 text-[9px] uppercase font-bold">Base Rate</span>
                         <strong>₹{item.rental_base_amount || (item.hourly_rate * (item.duration || 4))}</strong>
                       </div>
                       <div>
-                        <span className="block text-slate-400 text-[9px] uppercase">Operator</span>
-                        <strong>{item.requires_operator ? `₹${item.operator_charge || 350}` : 'Self-drive'}</strong>
+                        <span className="block text-slate-400 text-[9px] uppercase font-bold">Market / Season</span>
+                        <strong className="text-amber-600">
+                          {item.demand_factor ? `${item.demand_factor}x` : '1.0x'} • {item.demand_level || 'Normal'}
+                        </strong>
                       </div>
                       <div>
-                        <span className="block text-slate-400 text-[9px] uppercase">Logistics</span>
-                        <strong>{item.delivery_option === 'Delivery' ? `₹${item.delivery_charge || 500}` : 'Self Pickup'}</strong>
+                        <span className="block text-slate-400 text-[9px] uppercase font-bold">Operator & Transport</span>
+                        <strong>₹{(item.operator_charge || 0) + (item.delivery_charge || 0)}</strong>
                       </div>
                       <div className="text-right">
-                        <span className="block text-slate-400 text-[9px] uppercase">Taxes & Fees</span>
+                        <span className="block text-slate-400 text-[9px] uppercase font-bold">GST (5%)</span>
                         <strong>₹{item.gst_tax || 0}</strong>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-800/60 pt-2 mt-2">
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Item Estimated Total</span>
-                      <strong className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                    <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-800/60 pt-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Item Estimated Total</span>
+                        {item.quote_expires_at && (
+                          <span className="text-[10px] text-slate-400">
+                            (Quote Locked)
+                          </span>
+                        )}
+                      </div>
+                      <strong className="text-base font-black text-emerald-600 dark:text-emerald-400">
                         ₹{item.item_total || item.estimated_cost || 0}
                       </strong>
                     </div>
@@ -319,22 +329,22 @@ export default function SmartBookingCart({
               <span className="font-semibold">₹{calculateSubtotal()}</span>
             </div>
             <div className="flex justify-between text-slate-500">
-              <span>Escrow Security Protection</span>
+              <span>Razorpay Escrow Security</span>
               <span className="font-bold text-emerald-600">✓ 100% Guaranteed</span>
             </div>
             <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-800">
               <span>Estimated Total Payable</span>
-              <span className="text-base text-emerald-600 dark:text-emerald-400">₹{calculateSubtotal()}</span>
+              <span className="text-lg text-emerald-600 dark:text-emerald-400">₹{calculateSubtotal()}</span>
             </div>
             <p className="text-[10px] text-slate-400 text-center">
-              *Estimate only until booking confirmation and final owner dispatch schedule.
+              *Estimate calculated dynamically from live cluster rates. Booking locks final authoritative price.
             </p>
           </div>
 
           <button
             onClick={onProceedToCheckout}
             disabled={validating || cartItems.some((i) => i.conflict_warning)}
-            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all"
+            className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all"
           >
             <span>Proceed to Booking Confirmation & Checkout</span>
             <ChevronRight className="w-4 h-4" />
