@@ -204,8 +204,63 @@ export default function LoginPage({ onNavigate }) {
                   🏢 Owner (Balasaheb)
                 </button>
               </div>
+
+              {/* View all 15 demo accounts expander */}
+              <details className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                <summary className="cursor-pointer font-semibold hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                  View all 15 demo accounts (Pune)
+                </summary>
+                <div className="mt-2 p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1.5 max-h-48 overflow-y-auto">
+                  <div>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">Farmers: </span>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {['farmer_suresh', 'farmer_anita', 'farmer_vikram', 'farmer_priya', 'farmer_ramesh'].map(u => (
+                        <button
+                          key={u}
+                          type="button"
+                          onClick={() => { setUsername(u); setPassword('Demo@AgriRent2026'); }}
+                          className="px-1.5 py-0.5 bg-white dark:bg-slate-800 border rounded text-[10px] hover:border-emerald-500"
+                        >
+                          {u}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-bold text-blue-600 dark:text-blue-400">Operators: </span>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {['operator_rajesh', 'operator_sunil', 'operator_amit', 'operator_ganesh', 'operator_sachin'].map(u => (
+                        <button
+                          key={u}
+                          type="button"
+                          onClick={() => { setUsername(u); setPassword('Demo@AgriRent2026'); }}
+                          className="px-1.5 py-0.5 bg-white dark:bg-slate-800 border rounded text-[10px] hover:border-blue-500"
+                        >
+                          {u}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-bold text-amber-600 dark:text-amber-400">Owners: </span>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {['owner_balasaheb', 'owner_kavita', 'owner_dattatray', 'owner_meena', 'owner_sanjay'].map(u => (
+                        <button
+                          key={u}
+                          type="button"
+                          onClick={() => { setUsername(u); setPassword('Demo@AgriRent2026'); }}
+                          className="px-1.5 py-0.5 bg-white dark:bg-slate-800 border rounded text-[10px] hover:border-amber-500"
+                        >
+                          {u}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </details>
+
               <p className="text-[10px] text-slate-400 text-center mt-2">
-                Password: <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-600 dark:text-slate-300 font-mono">Demo@AgriRent2026</code>
+                Shared Password: <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-600 dark:text-slate-300 font-mono">Demo@AgriRent2026</code>
               </p>
             </div>
           </form>
