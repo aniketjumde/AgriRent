@@ -9,7 +9,7 @@ from django.db.models import Sum, Count, Avg, Q
 from django.utils import timezone
 from datetime import datetime, timedelta
 
-from .models import User, Equipment, Booking, Review, Message, Notification, SupportTicket, PricePrediction, Recommendation
+from .models import User, Equipment, Booking, Review, Message, Notification, SupportTicket, PricePrediction, Recommendation, PaymentTransaction
 from .serializers import (
     UserSerializer, UserProfileSerializer, EquipmentSerializer, BookingSerializer, 
     ReviewSerializer, MessageSerializer, NotificationSerializer, SupportTicketSerializer,
@@ -482,72 +482,106 @@ class BookingListCreateView(APIView):
         equipment_id = request.data.get('equipment')
         start_date_str = request.data.get('start_date')
         end_date_str = request.data.get('end_date')
-        
+        rental_type = request.data.get('rental_type', 'hourly')
+        duration_val = float(request.data.get('duration', 4.0))
+        acreage = float(request.data.get('acreage', 2.0))
+        farming_operation = request.data.get('farming_operation', 'Land Preparation')
+        delivery_option = request.data.get('delivery_option', 'Pickup')
+        requires_operator = bool(request.data.get('requires_operator', False))
+        insurance_opt_in = bool(request.data.get('insurance_opt_in', False))
+        micro_rental_shared = bool(request.data.get('micro_rental_shared', False))
+        notes = request.data.get('notes', '')
+        farmer_lat = float(request.data.get('farmer_lat', 18.5204))
+        farmer_lng = float(request.data.get('farmer_lng', 73.8567))
+        agreed_price = request.data.get('agreed_price')
+        quote_id = request.data.get('quote_id')
+
         try:
-            equipment = Equipment.objects.get(pk=equipment_id)
+            equipment = Equipment.objects.select_related('owner').get(pk=equipment_id)
         except Equipment.DoesNotExist:
             return Response({"error": "Equipment not found."}, status=status.HTTP_404_NOT_FOUND)
             
         if not equipment.is_available:
             return Response({"error": "Equipment is not available currently."}, status=status.HTTP_400_BAD_REQUEST)
-            
-        # Parse dates to calculate total hours and total cost
-        try:
-            start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
-            end_date = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
-        except ValueError:
-            return Response({"error": "Invalid date format. Use ISO 8601."}, status=status.HTTP_400_BAD_REQUEST)
-            
-        duration = end_date - start_date
-        total_hours = duration.total_seconds() / 3600.0
-        if total_hours <= 0:
-            return Response({"error": "End date must be after start date."}, status=status.HTTP_400_BAD_REQUEST)
-            
-        # Calculate pricing logic with Micro-Rental / Shared Cooperative model
-        base_cost = float(equipment.rental_price_per_hour) * total_hours
-        
-        micro_rental_shared = request.data.get('micro_rental_shared', False)
-        if micro_rental_shared:
-            base_cost = base_cost * 0.5 # Shared booking splits the cost in half!
-            
-        # Optional Insurance coverage
-        insurance_opt_in = request.data.get('insurance_opt_in', False)
-        if insurance_opt_in:
-            # Let's say insurance is a flat ₹150 per day (assumed 24 hours interval)
-            insurance_days = max(1, int(total_hours / 24.0))
-            base_cost += (insurance_days * 150.0)
-            
-        delivery_option = request.data.get('delivery_option', 'Pickup')
-        if delivery_option == 'Delivery':
-            base_cost += 500.0 # Delivery fee
-            
-        notes = request.data.get('notes', '')
-        
-        # Calculate carbon saved: sharing equipment saves approx 8.5 kg of CO2 per hour compared to individual purchasing
+
+        # Import dynamic pricing engine
+        from .pricing_engine import generate_equipment_quote
+
+        # Generate fresh server-side authoritative quote
+        quote = generate_equipment_quote(
+            equipment_id=equipment.id,
+            farmer_lat=farmer_lat,
+            farmer_lng=farmer_lng,
+            start_date_str=start_date_str,
+            end_date_str=end_date_str,
+            rental_type=rental_type,
+            duration=duration_val,
+            acreage=acreage,
+            farming_operation=farming_operation,
+            requires_operator=requires_operator,
+            delivery_option=delivery_option,
+            insurance_opt_in=insurance_opt_in,
+            micro_rental_shared=micro_rental_shared
+        )
+
+        if quote.get('has_conflict'):
+            return Response({
+                "error": "Conflicting equipment reservation detected.",
+                "details": quote.get('conflict_message')
+            }, status=status.HTTP_409_CONFLICT)
+
+        server_total = quote['pricing_breakdown']['estimated_total']
+
+        # If farmer agreed to a previous price, check if quote price changed materially (>1%)
+        if agreed_price is not None:
+            try:
+                agreed_val = float(agreed_price)
+                if abs(server_total - agreed_val) > 1.0:
+                    return Response({
+                        "error": "Pricing quote has updated due to dynamic demand or expiry. Please review updated quote.",
+                        "requires_reconsent": True,
+                        "previous_price": agreed_val,
+                        "updated_price": server_total,
+                        "updated_quote": quote
+                    }, status=status.HTTP_409_CONFLICT)
+            except (ValueError, TypeError):
+                pass
+
+        start_date = datetime.fromisoformat(quote['start_date'])
+        end_date = datetime.fromisoformat(quote['end_date'])
+        total_hours = max(1.0, (end_date - start_date).total_seconds() / 3600.0)
+
+        # Carbon saved: sharing equipment saves approx 8.5 kg of CO2 per hour
         carbon_saved = total_hours * (12.4 if micro_rental_shared else 8.5)
         
         import uuid
         import hashlib
-        # Simulate Blockchain contract audit hash logs
         contract_uuid = str(uuid.uuid4())
         ipfs_hash = "Qm" + hashlib.sha256(contract_uuid.encode()).hexdigest()[:44]
         contract_hash = "0x" + hashlib.sha256(ipfs_hash.encode()).hexdigest()
-        
-        requires_operator = request.data.get('requires_operator', False)
-        if requires_operator:
-            # Add standard operator fee to booking total
-            base_cost += 350.0
+
+        # Detailed breakdown saved into notes
+        pricing_audit_note = (
+            f"[Price Lock] Total: ₹{server_total} | Base: ₹{quote['pricing_breakdown']['raw_base_rental']} "
+            f"| Demand: {quote['pricing_breakdown']['demand_factor']}x ({quote['pricing_breakdown']['demand_level']}) "
+            f"| Season: {quote['pricing_breakdown']['seasonal_factor']}x ({quote['pricing_breakdown']['season_name']}) "
+            f"| Operator: ₹{quote['pricing_breakdown']['operator_charges']} "
+            f"| Transport: ₹{quote['pricing_breakdown']['transport_charges']} "
+            f"| Task: {farming_operation} ({acreage} Acres) "
+            f"| Delivery: {delivery_option} "
+            f"{'| ' + notes if notes else ''}"
+        )
 
         booking = Booking.objects.create(
             equipment=equipment,
             farmer=request.user,
             start_date=start_date,
             end_date=end_date,
-            total_cost=base_cost,
+            total_cost=server_total,
             delivery_option=delivery_option,
-            notes=notes,
+            notes=pricing_audit_note,
             status='Pending',
-            escrow_status='Held', # Payments securely locked in escrow
+            escrow_status='Held',
             micro_rental_shared=micro_rental_shared,
             insurance_opt_in=insurance_opt_in,
             insurance_claim_status='N/A' if not insurance_opt_in else 'Verified Policy',
@@ -560,7 +594,7 @@ class BookingListCreateView(APIView):
         # Create notification for owner
         Notification.objects.create(
             user=equipment.owner,
-            content=f"New booking request from {request.user.username} for your {equipment.title}. Escrow: Held."
+            content=f"New booking request #{booking.id} from {request.user.username} for {equipment.title} (₹{server_total})."
         )
         
         serializer = BookingSerializer(booking)
@@ -821,14 +855,45 @@ def ai_assistant_chat_view(request):
 @permission_classes([permissions.IsAuthenticated])
 def farmer_dashboard_analytics(request):
     bookings = Booking.objects.filter(farmer=request.user)
-    total_spent = bookings.filter(status='Completed').aggregate(Sum('total_cost'))['total_cost__sum'] or 0.0
+    
+    # Calculate spending based on actual captured payments or completed bookings
+    captured_payments = PaymentTransaction.objects.filter(
+        farmer=request.user,
+        status='Captured'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0.0
+    
+    completed_cost = bookings.filter(status='Completed').aggregate(Sum('total_cost'))['total_cost__sum'] or 0.0
+    total_spent = float(captured_payments) if captured_payments > 0 else float(completed_cost)
+    
+    # Nearby equipment summary
+    nearby_total = Equipment.objects.filter(is_available=True).count()
+    
+    # Notifications count
+    unread_notifications = Notification.objects.filter(user=request.user, is_read=False).count()
+    
+    # Recent payments
+    recent_transactions = PaymentTransaction.objects.filter(farmer=request.user).order_by('-created_at')[:5]
+    payment_history_summary = [{
+        'id': tx.id,
+        'booking_id': tx.booking.id if tx.booking else None,
+        'equipment_title': tx.booking.equipment.title if tx.booking and tx.booking.equipment else 'Agricultural Equipment',
+        'amount': float(tx.amount),
+        'status': tx.status,
+        'created_at': tx.created_at.isoformat(),
+        'receipt_number': tx.receipt_number
+    } for tx in recent_transactions]
     
     return Response({
         "total_bookings": bookings.count(),
         "active_rentals": bookings.filter(status='In Progress').count(),
         "pending_bookings": bookings.filter(status='Pending').count(),
+        "approved_bookings": bookings.filter(status='Approved').count(),
         "completed_rentals": bookings.filter(status='Completed').count(),
-        "total_spent": total_spent
+        "cancelled_bookings": bookings.filter(status='Rejected').count(),
+        "total_spent": round(total_spent, 2),
+        "nearby_available_equipment": nearby_total,
+        "unread_notifications": unread_notifications,
+        "recent_payments": payment_history_summary
     })
 
 

@@ -7,25 +7,13 @@ from django.db.models import Avg, Q
 
 from .models import Equipment, Booking, OperatorProfile
 from .serializers import EquipmentSerializer
-
-
-def haversine_distance(lat1, lon1, lat2, lon2):
-    """
-    Computes great-circle distance between two points on the Earth in kilometers.
-    """
-    try:
-        lat1, lon1, lat2, lon2 = map(float, [lat1, lon1, lat2, lon2])
-    except (ValueError, TypeError):
-        return 99999.0
-
-    R = 6371.0  # Earth's radius in kilometers
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = (math.sin(dlat / 2.0) ** 2 +
-         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
-         math.sin(dlon / 2.0) ** 2)
-    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
-    return round(R * c, 2)
+from .pricing_engine import (
+    haversine_distance,
+    generate_equipment_quote,
+    get_farming_season,
+    calculate_seasonal_factor,
+    calculate_local_demand_factor
+)
 
 
 @api_view(['GET'])
@@ -34,17 +22,18 @@ def nearby_equipment_view(request):
     """
     Returns agricultural equipment filtered by:
     - GPS location & radius (5, 10, 25, 50, or custom km)
-    - Category
+    - Category (Tractor, Harvester, Rotavator, Seeder, Sprayer, etc.)
     - Price range (max_price)
-    - Availability status
+    - Availability status (available, busy, all)
     - Slot booking conflicts for given start_date & end_date
     - Sorting by distance, price, or rating
+    - Dynamic live pricing estimate and operator availability in the cluster
     """
     try:
-        farmer_lat = float(request.query_params.get('lat', 11.0168))
-        farmer_lng = float(request.query_params.get('lng', 76.9558))
+        farmer_lat = float(request.query_params.get('lat', 18.5204))
+        farmer_lng = float(request.query_params.get('lng', 73.8567))
     except (ValueError, TypeError):
-        farmer_lat, farmer_lng = 11.0168, 76.9558
+        farmer_lat, farmer_lng = 18.5204, 73.8567
 
     radius_km = float(request.query_params.get('radius', 50))
     category = request.query_params.get('category', '').strip()
@@ -95,6 +84,8 @@ def nearby_equipment_view(request):
         verification_status='Verified'
     ).count()
 
+    season_name = get_farming_season(start_date)
+
     for eq in queryset:
         dist = haversine_distance(farmer_lat, farmer_lng, eq.location_latitude, eq.location_longitude)
         if radius_km and dist > radius_km:
@@ -119,15 +110,33 @@ def nearby_equipment_view(request):
         elif availability == 'busy' and effective_available:
             continue
 
+        # Dynamic pricing preview parameters
+        seasonal_factor, seasonal_reason = calculate_seasonal_factor(season_name, eq.category)
+        demand_factor, demand_level, demand_reason = calculate_local_demand_factor(
+            eq, start_date or datetime.now(), end_date or datetime.now()
+        )
+
+        hourly_rate = float(eq.rental_price_per_hour)
+        daily_rate = round(hourly_rate * 8.0, 2)
+
         # Equipment serialization details
         data = EquipmentSerializer(eq).data
         data['distance_km'] = dist
         data['is_slot_conflicted'] = is_slot_conflicted
         data['effective_available'] = effective_available
-        data['rental_price_per_day'] = round(float(eq.rental_price_per_hour) * 8.0, 2)  # Standard 8-hr farm shift
+        data['rental_price_per_day'] = daily_rate
         data['operator_available'] = (online_operators_count > 0)
-        data['operator_charge_per_day'] = 350.0  # Standard daily operator wage
-        data['delivery_charge_estimate'] = round(max(150.0, dist * 18.0), 2)  # ₹18/km transport
+        data['operator_charge_per_hour'] = 150.0
+        data['operator_charge_per_day'] = 1200.0
+        data['delivery_charge_estimate'] = round(max(200.0, dist * 20.0), 2)  # ₹20/km transport
+        data['pricing_factors'] = {
+            'season_name': season_name,
+            'seasonal_factor': seasonal_factor,
+            'seasonal_reason': seasonal_reason,
+            'demand_level': demand_level,
+            'demand_factor': demand_factor,
+            'demand_reason': demand_reason
+        }
 
         results.append(data)
 
@@ -154,13 +163,66 @@ def nearby_equipment_view(request):
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
+def calculate_price_quote_view(request):
+    """
+    Computes an itemized authoritative pricing quote for an equipment rental request:
+    - Base rate * duration
+    - Demand factor & seasonal factor with explanations
+    - Operator charges
+    - Distance-based transport charges
+    - Multi-day / volume discounts
+    - Applicable taxes (5% GST)
+    - Returns quote_id and quote_expires_at (15-min lock)
+    """
+    equipment_id = request.data.get('equipment_id') or request.data.get('equipment')
+    if not equipment_id:
+        return Response({"error": "equipment_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    farmer_lat = float(request.data.get('farmer_lat', 18.5204))
+    farmer_lng = float(request.data.get('farmer_lng', 73.8567))
+    start_date_str = request.data.get('start_date')
+    end_date_str = request.data.get('end_date')
+    rental_type = request.data.get('rental_type', 'hourly')
+    duration = float(request.data.get('duration', 4.0))
+    acreage = float(request.data.get('acreage', 2.0))
+    farming_operation = request.data.get('farming_operation', 'Land Preparation')
+    requires_operator = bool(request.data.get('requires_operator', False))
+    delivery_option = request.data.get('delivery_option', 'Pickup')
+    insurance_opt_in = bool(request.data.get('insurance_opt_in', False))
+    micro_rental_shared = bool(request.data.get('micro_rental_shared', False))
+
+    try:
+        quote = generate_equipment_quote(
+            equipment_id=equipment_id,
+            farmer_lat=farmer_lat,
+            farmer_lng=farmer_lng,
+            start_date_str=start_date_str,
+            end_date_str=end_date_str,
+            rental_type=rental_type,
+            duration=duration,
+            acreage=acreage,
+            farming_operation=farming_operation,
+            requires_operator=requires_operator,
+            delivery_option=delivery_option,
+            insurance_opt_in=insurance_opt_in,
+            micro_rental_shared=micro_rental_shared
+        )
+        return Response(quote, status=status.HTTP_200_OK)
+    except Equipment.DoesNotExist:
+        return Response({"error": f"Equipment #{equipment_id} not found."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": f"Failed to compute price quote: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
 def validate_cart_booking_view(request):
     """
-    Validates an agricultural equipment booking item or entire cart:
-    - Calculates server-side verified rental cost breakdown
-    - Validates machine existence, maintenance & availability
-    - Validates no overlapping bookings
-    - Computes operator charges, transportation/delivery fee, insurance, taxes
+    Validates an agricultural equipment booking item or entire cart using the Dynamic Pricing Engine:
+    - Calculates server-side verified rental cost breakdown per item
+    - Detects time slot conflicts with active bookings
+    - Computes demand factor, seasonal factor, operator wages, transport fees, taxes
+    - Returns comprehensive itemized breakdown and cart total
     """
     items = request.data.get('items', [])
     if not items and request.data.get('equipment_id'):
@@ -173,8 +235,8 @@ def validate_cart_booking_view(request):
     total_cart_amount = 0.0
     has_conflicts = False
 
-    farmer_lat = request.data.get('farmer_lat', 11.0168)
-    farmer_lng = request.data.get('farmer_lng', 76.9558)
+    farmer_lat = float(request.data.get('farmer_lat', 18.5204))
+    farmer_lng = float(request.data.get('farmer_lng', 73.8567))
 
     for item in items:
         eq_id = item.get('equipment_id') or item.get('equipment')
@@ -187,86 +249,78 @@ def validate_cart_booking_view(request):
         requires_operator = bool(item.get('requires_operator', False))
         delivery_option = item.get('delivery_option', 'Pickup')  # 'Pickup' or 'Delivery'
         insurance_opt_in = bool(item.get('insurance_opt_in', False))
+        micro_rental_shared = bool(item.get('micro_rental_shared', False))
 
         try:
-            equipment = Equipment.objects.select_related('owner').get(pk=eq_id)
+            quote = generate_equipment_quote(
+                equipment_id=eq_id,
+                farmer_lat=farmer_lat,
+                farmer_lng=farmer_lng,
+                start_date_str=start_date_str,
+                end_date_str=end_date_str,
+                rental_type=rental_type,
+                duration=duration_val,
+                acreage=acreage,
+                farming_operation=farming_operation,
+                requires_operator=requires_operator,
+                delivery_option=delivery_option,
+                insurance_opt_in=insurance_opt_in,
+                micro_rental_shared=micro_rental_shared
+            )
         except Equipment.DoesNotExist:
             return Response({"error": f"Equipment #{eq_id} not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Distance calculation
-        dist_km = haversine_distance(farmer_lat, farmer_lng, equipment.location_latitude, equipment.location_longitude)
-
-        # Check conflicts
-        conflict = False
-        if start_date_str and end_date_str:
-            try:
-                s_dt = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
-                e_dt = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
-                conflict = Booking.objects.filter(
-                    equipment=equipment,
-                    status__in=['Pending', 'Approved', 'In Progress'],
-                    start_date__lt=e_dt,
-                    end_date__gt=s_dt
-                ).exists()
-            except Exception:
-                pass
-
-        if conflict:
+        if quote.get('has_conflict'):
             has_conflicts = True
 
-        # Server-side authoritative calculation
-        hourly_rate = float(equipment.rental_price_per_hour)
-        daily_rate = round(hourly_rate * 8.0, 2)
-
-        if rental_type == 'daily':
-            rental_base = round(daily_rate * duration_val, 2)
-            est_hours = duration_val * 8.0
-        else:
-            rental_base = round(hourly_rate * duration_val, 2)
-            est_hours = duration_val
-
-        # Operator charge
-        operator_charge = (350.0 * max(1, int(est_hours / 8.0))) if requires_operator else 0.0
-
-        # Transportation / Delivery charge
-        delivery_charge = round(max(150.0, dist_km * 18.0), 2) if delivery_option == 'Delivery' else 0.0
-
-        # Optional insurance: flat ₹150 per day
-        insurance_charge = (150.0 * max(1, int(est_hours / 24.0))) if insurance_opt_in else 0.0
-
-        subtotal = rental_base + operator_charge + delivery_charge + insurance_charge
-        gst_tax = round(subtotal * 0.05, 2)  # 5% Agricultural equipment rental GST
-        item_total = round(subtotal + gst_tax, 2)
-
-        total_cart_amount += item_total
+        bd = quote['pricing_breakdown']
+        total_cart_amount += bd['estimated_total']
 
         validated_items.append({
-            "equipment_id": equipment.id,
-            "equipment_title": equipment.title,
-            "equipment_category": equipment.category,
-            "equipment_image": equipment.image_url,
-            "owner_id": equipment.owner.id,
-            "owner_name": equipment.owner.username,
-            "distance_km": dist_km,
+            "quote_id": quote['quote_id'],
+            "quote_expires_at": quote['quote_expires_at'],
+            "equipment_id": quote['equipment_id'],
+            "equipment_title": quote['equipment_title'],
+            "equipment_category": quote['equipment_category'],
+            "equipment_image": quote['equipment_image'],
+            "owner_id": quote['owner_id'],
+            "owner_name": quote['owner_name'],
+            "distance_km": quote['distance_km'],
             "farming_operation": farming_operation,
             "acreage": acreage,
-            "start_date": start_date_str,
-            "end_date": end_date_str,
+            "start_date": quote['start_date'],
+            "end_date": quote['end_date'],
             "rental_type": rental_type,
-            "duration": duration_val,
-            "hourly_rate": hourly_rate,
-            "daily_rate": daily_rate,
-            "rental_base_amount": rental_base,
+            "duration": quote['duration'],
+            "hourly_rate": bd['unit_base_rate'] if rental_type == 'hourly' else round(bd['unit_base_rate'] / 8.0, 2),
+            "daily_rate": bd['unit_base_rate'] if rental_type == 'daily' else round(bd['unit_base_rate'] * 8.0, 2),
+            "rental_base_amount": bd['raw_base_rental'],
+            "season_name": bd['season_name'],
+            "seasonal_factor": bd['seasonal_factor'],
+            "seasonal_reason": bd['seasonal_reason'],
+            "demand_level": bd['demand_level'],
+            "demand_factor": bd['demand_factor'],
+            "demand_reason": bd['demand_reason'],
+            "adjusted_rental": bd['adjusted_rental'],
+            "demand_adjustment": bd['demand_adjustment'],
             "requires_operator": requires_operator,
-            "operator_charge": operator_charge,
+            "operator_charges": bd['operator_charges'],
+            "operator_explanation": bd['operator_explanation'],
             "delivery_option": delivery_option,
-            "delivery_charge": delivery_charge,
+            "transport_charges": bd['transport_charges'],
+            "transport_explanation": bd['transport_explanation'],
             "insurance_opt_in": insurance_opt_in,
-            "insurance_charge": insurance_charge,
-            "gst_tax": gst_tax,
-            "item_total": item_total,
-            "is_available": equipment.is_available and not conflict,
-            "conflict_warning": "Selected time slot conflicts with another active reservation" if conflict else None
+            "insurance_charges": bd['insurance_charges'],
+            "duration_discount_amount": bd['duration_discount_amount'],
+            "duration_discount_reason": bd['duration_discount_reason'],
+            "micro_rental_shared": micro_rental_shared,
+            "shared_coop_discount": bd['shared_coop_discount'],
+            "total_discounts": bd['total_discounts'],
+            "gst_tax": bd['taxes_amount'],
+            "item_total": bd['estimated_total'],
+            "is_available": quote['is_available'],
+            "has_conflict": quote['has_conflict'],
+            "conflict_warning": quote['conflict_message']
         })
 
     return Response({
