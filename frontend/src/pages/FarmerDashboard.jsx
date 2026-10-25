@@ -1082,7 +1082,7 @@ export default function FarmerDashboard() {
             <div>
               <span className="block text-[10px] text-slate-400 uppercase tracking-wider font-extrabold">Rental Spending</span>
               <strong className="text-base sm:text-lg text-slate-800 dark:text-white">
-                ₹{analyticsData?.total_spent ?? (payments.filter(p => p.status === 'Captured').reduce((acc, p) => acc + parseFloat(p.amount || 0), 0) || 0)}
+                ₹{analyticsData?.total_spent ?? (paymentsList.filter(p => p.status === 'Captured').reduce((acc, p) => acc + parseFloat(p.amount || 0), 0) || 0)}
               </strong>
             </div>
           </div>
