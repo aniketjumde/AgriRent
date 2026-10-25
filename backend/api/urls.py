@@ -47,15 +47,17 @@ urlpatterns = [
 
     # Auth Routes
     path('auth/register/', register_view, name='register'),
-    path('auth/resend-code/', resend_verification_code_view, name='resend-code'),
-    path('auth/verify-email/', verify_email_view, name='verify-email'),
-    path('auth/verify-otp/', verify_otp_view, name='verify-otp'),
     path('auth/login/', login_view, name='login'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('auth/logout/', logout_view, name='logout'),
+    path('auth/me/', get_me_view, name='auth-me'),
+
+    # Optional backward compatibility endpoints
+    path('auth/resend-code/', resend_verification_code_view, name='resend-code'),
+    path('auth/verify-email/', verify_email_view, name='verify-email'),
+    path('auth/verify-otp/', verify_otp_view, name='verify-otp'),
     path('auth/forgot-password/', forgot_password_view, name='forgot-password'),
     path('auth/reset-password/', reset_password_view, name='reset-password'),
-    path('auth/me/', get_me_view, name='auth-me'),
 
     # Listings & Reviews
     path('equipment/', EquipmentListCreateView.as_view(), name='equipment-list-create'),

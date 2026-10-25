@@ -101,8 +101,8 @@ class UserSerializer(serializers.ModelSerializer):
             email=validated_data['email'],
             role=role,
             phone_number=validated_data.get('phone_number', ''),
-            is_verified=False,
-            is_email_verified=False,
+            is_verified=True,
+            is_email_verified=True,
             reliability_score=4.8,
             aadhaar_kyc_status='Verified',
             aadhaar_number_masked='XXXX-XXXX-1234'

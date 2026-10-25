@@ -48,14 +48,14 @@ class SecureAuthTestSuite(TestCase):
             'phone_number': '+919822998877'
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
-        self.assertFalse(res.data['is_email_verified'])
+        self.assertIn('token', res.data)
+        self.assertIn('access', res.data['token'])
         self.assertNotIn('password', res.data)
         
         # Check DB
         user = User.objects.get(username='ram_patil')
-        self.assertFalse(user.is_email_verified)
-        self.assertFalse(user.is_verified)
-        self.assertTrue(user.email_verification_token is not None)
+        self.assertTrue(user.is_email_verified)
+        self.assertTrue(user.is_verified)
         self.assertTrue(user.check_password('StrongPassword#2026'))
 
     def test_duplicate_email_rejected_case_insensitive(self):
@@ -224,20 +224,21 @@ class SecureAuthTestSuite(TestCase):
         self.assertIn('refresh', res.data['token'])
         self.assertEqual(res.data['user']['email'], 'verified.farmer@agrirent.demo')
 
+    def test_login_with_username_and_password(self):
+        res = self.client.post('/api/auth/login/', {
+            'username': 'verified_farmer',
+            'password': self.strong_password
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('token', res.data)
+        self.assertEqual(res.data['user']['username'], 'verified_farmer')
+
     def test_login_with_incorrect_password_fails(self):
         res = self.client.post('/api/auth/login/', {
             'email': 'verified.farmer@agrirent.demo',
             'password': 'WrongPasswordXYZ123'
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_unverified_account_login_rejected(self):
-        res = self.client.post('/api/auth/login/', {
-            'email': 'unverified.farmer@agrirent.demo',
-            'password': self.strong_password
-        }, format='json')
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertFalse(res.data['is_email_verified'])
 
     def test_inactive_account_login_rejected(self):
         self.verified_user.is_active = False
