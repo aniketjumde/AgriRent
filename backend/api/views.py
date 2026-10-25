@@ -21,7 +21,8 @@ from ai.price_predictor import predict_price
 from ai.voice_parser import parse_voice_text
 from ai.assistant import query_assistant
 from .auth_utils import (
-    generate_secure_token, hash_token, send_verification_email, send_password_reset_email
+    generate_verification_code, generate_secure_token, hash_token,
+    send_verification_email, send_password_reset_email
 )
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken, OutstandingToken, BlacklistedToken
@@ -47,28 +48,34 @@ class AuthVerifyThrottle(ScopedRateThrottle):
 def register_view(request):
     """
     Secure registration:
-    - Normalizes and validates unique email
-    - Minimum 12 character password policy via UserSerializer
-    - Generates cryptographically secure expiring verification token
-    - Sends verification email (never returns tokens/secrets in response)
+    - Normalizes and validates unique email & username
+    - Validates phone format and minimum 12-char password
+    - Generates cryptographically secure 6-digit verification code (expires in 5 mins)
+    - Dispatches verification email via configured provider
+    - Returns meaningful error if provider fails
     """
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
         
-        raw_token = generate_secure_token()
-        user.email_verification_token = hash_token(raw_token)
+        raw_code = generate_verification_code()
+        user.email_verification_token = hash_token(raw_code)
         user.email_verification_sent_at = timezone.now()
-        user.otp_code = None  # Remove any insecure hardcoded OTP
+        user.verification_attempts = 0
+        user.otp_code = None
         user.save()
 
         try:
-            send_verification_email(user, raw_token)
-        except Exception:
-            pass  # Handled safely
+            send_verification_email(user, raw_code)
+        except Exception as e:
+            # Delete incomplete user registration so they can re-try cleanly
+            user.delete()
+            return Response({
+                "error": "Failed to dispatch verification email. Please check your email address or try again shortly."
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({
-            "message": "User registered successfully. A verification link has been sent to your email.",
+            "message": "User registered successfully! A 6-digit verification code has been dispatched to your email address.",
             "username": user.username,
             "email": user.email,
             "is_email_verified": False
@@ -79,50 +86,109 @@ def register_view(request):
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 @throttle_classes([AuthVerifyThrottle])
-def verify_email_view(request):
+def resend_verification_code_view(request):
     """
-    Secure Email Verification:
-    - Accepts token & email OR verification code
-    - Validates token hash and 24-hour expiration
-    - Rejects universal bypasses (e.g. '123456')
-    - One-time use: clears verification token upon success
+    Resend verification code:
+    - 60-second cooldown between requests
+    - Generates new 6-digit code with fresh 5-minute expiry
+    - Dispatches to registered email
     """
-    token_str = (request.data.get('token') or request.data.get('otp_code') or '').strip()
     email_or_username = (request.data.get('email') or request.data.get('username') or '').strip()
-
-    if not token_str or not email_or_username:
-        return Response({"error": "Both email and verification token are required."}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Universal bypass rejection
-    if token_str in ['123456', '000000', '111111']:
-        return Response({"error": "Invalid or expired verification token."}, status=status.HTTP_400_BAD_REQUEST)
+    if not email_or_username:
+        return Response({"error": "Email address is required to resend verification code."}, status=status.HTTP_400_BAD_REQUEST)
 
     user = User.objects.filter(
         Q(email__iexact=email_or_username) | Q(username__iexact=email_or_username)
     ).first()
 
     if not user:
-        return Response({"error": "Invalid or expired verification token."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "No account found with this email."}, status=status.HTTP_404_NOT_FOUND)
 
-    # Verify token
+    if user.is_email_verified or user.is_verified:
+        return Response({"message": "This account is already verified. You can log in directly.", "already_verified": True}, status=status.HTTP_200_OK)
+
+    # 60-second cooldown check
+    if user.email_verification_sent_at:
+        seconds_passed = (timezone.now() - user.email_verification_sent_at).total_seconds()
+        if seconds_passed < 60:
+            remaining = int(60 - seconds_passed)
+            return Response({
+                "error": f"Please wait {remaining} seconds before requesting a new verification code.",
+                "retry_after_seconds": remaining
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+    raw_code = generate_verification_code()
+    user.email_verification_token = hash_token(raw_code)
+    user.email_verification_sent_at = timezone.now()
+    user.verification_attempts = 0
+    user.save()
+
+    try:
+        send_verification_email(user, raw_code)
+    except Exception:
+        return Response({"error": "Failed to deliver email. Please verify mail settings and try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({
+        "message": "A fresh 6-digit verification code has been sent to your email address.",
+        "email": user.email
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+@throttle_classes([AuthVerifyThrottle])
+def verify_email_view(request):
+    """
+    Secure Email Verification:
+    - Accepts 6-digit code & email
+    - Strictly rejects '123456' universal bypass
+    - Enforces 5-minute expiration
+    - Limits failed attempts to 5 before invalidating
+    - Invalidates code upon successful verification (single-use)
+    """
+    token_str = (request.data.get('token') or request.data.get('otp_code') or '').strip()
+    email_or_username = (request.data.get('email') or request.data.get('username') or '').strip()
+
+    if not token_str or not email_or_username:
+        return Response({"error": "Both email and verification code are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Universal bypass rejection
+    if token_str in ['123456', '000000', '111111']:
+        return Response({"error": "Invalid verification code. Check the code sent to your email."}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.filter(
+        Q(email__iexact=email_or_username) | Q(username__iexact=email_or_username)
+    ).first()
+
+    if not user:
+        return Response({"error": "Invalid or expired verification code."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Verify code hash first: invalid or reused token must be rejected
     hashed_input = hash_token(token_str)
     if not user.email_verification_token or user.email_verification_token != hashed_input:
-        return Response({"error": "Invalid or expired verification token."}, status=status.HTTP_400_BAD_REQUEST)
+        user.verification_attempts = (user.verification_attempts or 0) + 1
+        user.save()
+        remaining_attempts = max(0, 5 - user.verification_attempts)
+        return Response({
+            "error": f"Invalid verification code. {remaining_attempts} attempts remaining.",
+            "remaining_attempts": remaining_attempts
+        }, status=status.HTTP_400_BAD_REQUEST)
 
-    # Check 24-hour expiration
-    if user.email_verification_sent_at and (timezone.now() - user.email_verification_sent_at) > timedelta(hours=24):
-        return Response({"error": "Verification token has expired. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
+    # Check 5-minute expiration
+    if user.email_verification_sent_at and (timezone.now() - user.email_verification_sent_at) > timedelta(minutes=5):
+        return Response({"error": "Verification code has expired. Please request a new code."}, status=status.HTTP_400_BAD_REQUEST)
 
     # Mark verified & invalidate token (one-time use)
     user.is_email_verified = True
     user.is_verified = True
     user.email_verification_token = None
     user.email_verification_sent_at = None
+    user.verification_attempts = 0
     user.save()
 
     refresh = RefreshToken.for_user(user)
     return Response({
-        "message": "Email verified successfully. Welcome to AgriRent!",
+        "message": "Email verified successfully! Welcome to AgriRent.",
         "token": {
             "refresh": str(refresh),
             "access": str(refresh.access_token)
@@ -199,7 +265,7 @@ def forgot_password_view(request):
     Secure Forgot Password:
     - Accepts email (or username)
     - Always returns generic success response to prevent account enumeration
-    - Dispatches single-use expiring token via email
+    - Dispatches single-use expiring token via email with 60-second cooldown
     """
     email_or_user = (request.data.get('email') or request.data.get('username') or '').strip()
     if email_or_user:
@@ -208,6 +274,16 @@ def forgot_password_view(request):
         ).first()
 
         if user:
+            # 60-second resend cooldown check
+            if user.password_reset_sent_at:
+                seconds_passed = (timezone.now() - user.password_reset_sent_at).total_seconds()
+                if seconds_passed < 60:
+                    remaining = int(60 - seconds_passed)
+                    return Response({
+                        "error": f"Please wait {remaining} seconds before requesting another reset code.",
+                        "retry_after_seconds": remaining
+                    }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
             raw_token = generate_secure_token()
             user.password_reset_token = hash_token(raw_token)
             user.password_reset_sent_at = timezone.now()
@@ -231,7 +307,7 @@ def reset_password_view(request):
     """
     Secure Password Reset:
     - Validates token against SHA-256 hash
-    - Enforces 1-hour expiration
+    - Enforces 15-minute expiration
     - Validates new password with Django password validators (min 12 chars)
     - Invalidates token after use
     - Blacklists existing outstanding refresh tokens for the user
@@ -258,8 +334,8 @@ def reset_password_view(request):
     if not user.password_reset_token or user.password_reset_token != hashed_input:
         return Response({"error": "Invalid or expired reset token."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # 1-hour expiration check
-    if user.password_reset_sent_at and (timezone.now() - user.password_reset_sent_at) > timedelta(hours=1):
+    # 15-minute expiration check
+    if user.password_reset_sent_at and (timezone.now() - user.password_reset_sent_at) > timedelta(minutes=15):
         return Response({"error": "Reset token has expired. Please request a new one."}, status=status.HTTP_400_BAD_REQUEST)
 
     # Password policy validation

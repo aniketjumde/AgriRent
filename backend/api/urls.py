@@ -4,7 +4,7 @@ from .nearby_views import nearby_equipment_view, validate_cart_booking_view
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
-    register_view, verify_email_view, verify_otp_view, login_view, logout_view,
+    register_view, resend_verification_code_view, verify_email_view, verify_otp_view, login_view, logout_view,
     forgot_password_view, reset_password_view, get_me_view,
     EquipmentListCreateView, EquipmentDetailView, verify_equipment_view, create_review_view,
     BookingListCreateView, update_booking_status_view, booking_chat_view, notification_list_view,
@@ -47,6 +47,7 @@ urlpatterns = [
 
     # Auth Routes
     path('auth/register/', register_view, name='register'),
+    path('auth/resend-code/', resend_verification_code_view, name='resend-code'),
     path('auth/verify-email/', verify_email_view, name='verify-email'),
     path('auth/verify-otp/', verify_otp_view, name='verify-otp'),
     path('auth/login/', login_view, name='login'),
