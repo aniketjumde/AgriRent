@@ -81,7 +81,7 @@ def rank_matching_operators_for_booking(booking, max_results=5):
 
         # 3. Experience & Reliability Score
         exp_score = min(10.0, float(op.experience_years) * 1.5)
-        rel_score = float(op.user.reliability_score) * 2.0 # out of 10
+        rel_score = float(getattr(op, 'reliability_score', 4.8) or 4.8) * 2.0 # out of 10
         quality_score = exp_score + rel_score
 
         # 4. Workload bonus (available now gets full 15 pts)

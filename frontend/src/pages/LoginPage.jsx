@@ -170,6 +170,44 @@ export default function LoginPage({ onNavigate }) {
                 {t('signup')}
               </button>
             </div>
+
+            {/* Quick Demo Account Selector */}
+            <div className="pt-4 border-t border-slate-200/60 dark:border-slate-800/60">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Quick Demo Accounts
+                </span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                  Pune Cluster
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => { setUsername('farmer_suresh'); setPassword('Demo@AgriRent2026'); }}
+                  className="px-2 py-1.5 text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-lg text-center border border-emerald-200 dark:border-emerald-800/50 transition-colors"
+                >
+                  🌾 Farmer (Suresh)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setUsername('operator_rajesh'); setPassword('Demo@AgriRent2026'); }}
+                  className="px-2 py-1.5 text-[11px] font-semibold bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg text-center border border-blue-200 dark:border-blue-800/50 transition-colors"
+                >
+                  🚜 Operator (Rajesh)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setUsername('owner_balasaheb'); setPassword('Demo@AgriRent2026'); }}
+                  className="px-2 py-1.5 text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-lg text-center border border-amber-200 dark:border-amber-800/50 transition-colors"
+                >
+                  🏢 Owner (Balasaheb)
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 text-center mt-2">
+                Password: <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-slate-600 dark:text-slate-300 font-mono">Demo@AgriRent2026</code>
+              </p>
+            </div>
           </form>
         ) : (
           /* Forgot Password OTP / Reset Form */

@@ -78,9 +78,37 @@ const getMockDB = () => {
       phone_number: `+9198765433${10 + i}`,
       is_verified: true,
       otp_code: '123456',
-      password: 'password123'
+      password: 'Demo@AgriRent2026'
     });
   }
+
+  // 15 Pune Demo Accounts (5 Farmers, 5 Operators, 5 Owners)
+  const puneDemoAccounts = [
+    // Farmers
+    { id: 11, username: 'farmer_suresh', role: 'Farmer', email: 'farmer.suresh@agrirent.demo', phone_number: '+919822011001', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 12, username: 'farmer_anita', role: 'Farmer', email: 'farmer.anita@agrirent.demo', phone_number: '+919822011002', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 13, username: 'farmer_vikram', role: 'Farmer', email: 'farmer.vikram@agrirent.demo', phone_number: '+919822011003', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 14, username: 'farmer_priya', role: 'Farmer', email: 'farmer.priya@agrirent.demo', phone_number: '+919822011004', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 15, username: 'farmer_ramesh', role: 'Farmer', email: 'farmer.ramesh@agrirent.demo', phone_number: '+919822011005', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    // Operators
+    { id: 21, username: 'operator_rajesh', role: 'Operator', email: 'operator.rajesh@agrirent.demo', phone_number: '+919822022001', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 22, username: 'operator_sunil', role: 'Operator', email: 'operator.sunil@agrirent.demo', phone_number: '+919822022002', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 23, username: 'operator_amit', role: 'Operator', email: 'operator.amit@agrirent.demo', phone_number: '+919822022003', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 24, username: 'operator_ganesh', role: 'Operator', email: 'operator.ganesh@agrirent.demo', phone_number: '+919822022004', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 25, username: 'operator_sachin', role: 'Operator', email: 'operator.sachin@agrirent.demo', phone_number: '+919822022005', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    // Owners
+    { id: 31, username: 'owner_balasaheb', role: 'Owner', email: 'owner.balasaheb@agrirent.demo', phone_number: '+919822033001', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 32, username: 'owner_kavita', role: 'Owner', email: 'owner.kavita@agrirent.demo', phone_number: '+919822033002', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 33, username: 'owner_dattatray', role: 'Owner', email: 'owner.dattatray@agrirent.demo', phone_number: '+919822033003', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 34, username: 'owner_meena', role: 'Owner', email: 'owner.meena@agrirent.demo', phone_number: '+919822033004', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' },
+    { id: 35, username: 'owner_sanjay', role: 'Owner', email: 'owner.sanjay@agrirent.demo', phone_number: '+919822033005', is_verified: true, otp_code: '123456', password: 'Demo@AgriRent2026' }
+  ];
+
+  puneDemoAccounts.forEach(acc => {
+    if (!mockUsers.find(u => u.username === acc.username)) {
+      mockUsers.push(acc);
+    }
+  });
 
   const categories = ['Tractor', 'Harvester', 'Rotavator', 'Seeder', 'Sprayer', 'Crop Protection Equipment'];
   const titles = {
@@ -117,6 +145,154 @@ const getMockDB = () => {
   // Generate 50 Equipment Listings
   const mockEquipment = [];
   
+  // Pune Specific Machine Owner Listings
+  const puneEquipmentListings = [
+    {
+      id: 131,
+      title: "John Deere 5310 PowerTech 55HP Tractor",
+      category: "Tractor",
+      description: "High-torque 55 HP utility tractor with 4WD, power steering, and heavy hydraulic lift for deep soil inversion and tilling.",
+      rental_price_per_hour: 850.00,
+      latitude: 18.5912,
+      longitude: 73.7389,
+      address: "Phase 1 Agro Hub, Hinjawadi, Pune, Maharashtra 411057",
+      owner_username: "owner_balasaheb",
+      image_url: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 132,
+      title: "Shaktiman Semi-Champion Rotavator 7 Feet",
+      category: "Rotavator",
+      description: "Boron steel blades, multi-speed gearbox, excellent soil pulverized seedbed preparation in a single pass.",
+      rental_price_per_hour: 450.00,
+      latitude: 18.5925,
+      longitude: 73.7350,
+      address: "Maan Village Road, Hinjawadi, Pune, Maharashtra 411057",
+      owner_username: "owner_balasaheb",
+      image_url: "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 133,
+      title: "Kubota DC-68G Multi-Crop Combine Harvester",
+      category: "Harvester",
+      description: "Paddy and soybean combine harvester with high ground clearance, grain tank capacity of 1200L, and rapid straw separation.",
+      rental_price_per_hour: 2200.00,
+      latitude: 18.5987,
+      longitude: 73.7656,
+      address: "Datta Mandir Road, Wakad, Pune, Maharashtra 411057",
+      owner_username: "owner_kavita",
+      image_url: "https://images.unsplash.com/photo-1595273670150-bd0c3c392e46?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 134,
+      title: "Lemken Opal 090 3-Furrow Hydraulic Reversible Plough",
+      category: "Plough",
+      description: "Heavy duty reversible disc plough for breaking hardpan soil layers up to 14 inches deep.",
+      rental_price_per_hour: 500.00,
+      latitude: 18.6010,
+      longitude: 73.7620,
+      address: "Kaspate Vasti, Wakad, Pune, Maharashtra 411057",
+      owner_username: "owner_kavita",
+      image_url: "https://images.unsplash.com/photo-1592878904946-b3cd8ae243d0?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 135,
+      title: "National Agro Multi-Crop Precision Seed Drill",
+      category: "Seed Drill",
+      description: "11-tyne automated seed and fertilizer drill with adjustable depth wheels and seed metering mechanisms.",
+      rental_price_per_hour: 480.00,
+      latitude: 18.5590,
+      longitude: 73.7868,
+      address: "Baner Hill Road, Baner, Pune, Maharashtra 411045",
+      owner_username: "owner_dattatray",
+      image_url: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 136,
+      title: "Mahindra Spring Loaded 9-Tyne Cultivator",
+      category: "Cultivator",
+      description: "Durable carbon spring tynes designed for aerating soil, weed uprooting, and seedbed levelling.",
+      rental_price_per_hour: 400.00,
+      latitude: 18.5550,
+      longitude: 73.7910,
+      address: "Pan Card Club Road, Baner, Pune, Maharashtra 411045",
+      owner_username: "owner_dattatray",
+      image_url: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 137,
+      title: "Mahindra Arjun Novo 605 DI-i 60HP Tractor",
+      category: "Tractor",
+      description: "Heavy-duty 60 HP tractor fitted with front ballast weights and high lift capacity for sugar cane transport.",
+      rental_price_per_hour: 950.00,
+      latitude: 18.5089,
+      longitude: 73.9259,
+      address: "Saswad Road Farm Gate, Hadapsar, Pune, Maharashtra 411028",
+      owner_username: "owner_meena",
+      image_url: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 138,
+      title: "Aspee Tractor-Mounted Boom Sprayer 600L",
+      category: "Sprayer",
+      description: "High pressure mist sprayer with 12m folding boom and stainless steel chemical resistant nozzles.",
+      rental_price_per_hour: 600.00,
+      latitude: 18.5120,
+      longitude: 73.9300,
+      address: "Manjari Farm Road, Hadapsar, Pune, Maharashtra 411028",
+      owner_username: "owner_meena",
+      image_url: "https://images.unsplash.com/photo-1599940824399-b87987ceb72a?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 139,
+      title: "Kartar 4000 Self-Propelled Combine Harvester",
+      category: "Harvester",
+      description: "Heavy duty combine harvester suitable for wheat, soybean, gram, and mustard harvesting with air-conditioned cabin.",
+      rental_price_per_hour: 2400.00,
+      latitude: 18.5808,
+      longitude: 73.9787,
+      address: "Nagar Road Agricultural Yard, Wagholi, Pune, Maharashtra 412207",
+      owner_username: "owner_sanjay",
+      image_url: "https://images.unsplash.com/photo-1595273670150-bd0c3c392e46?auto=format&fit=crop&q=80&w=600"
+    },
+    {
+      id: 140,
+      title: "Fieldking Heavy-Duty Rotary Tiller 6 Feet",
+      category: "Rotavator",
+      description: "Multi-speed side gear drive rotary tiller for heavy black clay soils of eastern Pune.",
+      rental_price_per_hour: 460.00,
+      latitude: 18.5830,
+      longitude: 73.9750,
+      address: "Bakori Road, Wagholi, Pune, Maharashtra 412207",
+      owner_username: "owner_sanjay",
+      image_url: "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?auto=format&fit=crop&q=80&w=600"
+    }
+  ];
+
+  puneEquipmentListings.forEach(item => {
+    const owner = mockUsers.find(u => u.username === item.owner_username) || mockUsers[1];
+    mockEquipment.push({
+      id: item.id,
+      title: item.title,
+      category: item.category,
+      description: item.description,
+      rental_price_per_hour: item.rental_price_per_hour,
+      location_latitude: item.latitude,
+      location_longitude: item.longitude,
+      address: item.address,
+      owner: owner.id,
+      owner_name: owner.username,
+      owner_phone: owner.phone_number,
+      image_url: item.image_url,
+      is_available: true,
+      is_verified: true,
+      reviews: [
+        { id: 1, author_name: "Suresh Patil", rating: 5, comment: "Top quality machinery in Pune area.", created_at: "2026-06-14T10:00:00.000Z" }
+      ],
+      created_at: new Date(2026, 5, 1).toISOString()
+    });
+  });
+
   const baseListings = [
     // Tractor (8)
     {
@@ -613,11 +789,144 @@ const getMockDB = () => {
     }
   ];
 
+  const puneOperatorProfiles = [
+    {
+      id: 21,
+      user_id: 21,
+      username: 'operator_rajesh',
+      full_name: 'Rajesh Pawar',
+      phone: '+919822022001',
+      experience_years: 8,
+      skills: ['Tractor Operation', 'Deep Ploughing', 'Paddy Puddling', 'Laser Levelling'],
+      supported_machinery: ['Tractor', 'Plough', 'Rotavator'],
+      service_area: 'Hinjawadi, Maan & Marunji Rural, Pune',
+      service_radius_km: 30.0,
+      current_latitude: 18.5912,
+      current_longitude: 73.7389,
+      working_hours: '06:00 AM - 07:00 PM',
+      is_available: true,
+      is_online: true,
+      current_work_status: 'Available',
+      verification_status: 'Verified',
+      verification_notes: 'All licenses and KYC verified by admin.',
+      license_number: 'MH-12-OP-2018-001',
+      document_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600',
+      hourly_compensation_rate: 300.00,
+      total_jobs_completed: 48,
+      reliability_score: 4.9,
+      aadhaar_kyc_status: 'Verified'
+    },
+    {
+      id: 22,
+      user_id: 22,
+      username: 'operator_sunil',
+      full_name: 'Sunil Gaikwad',
+      phone: '+919822022002',
+      experience_years: 6,
+      skills: ['Multi-Crop Combine Harvester', 'Crop Threshing', 'Straw Management'],
+      supported_machinery: ['Harvester', 'Tractor', 'Rotavator'],
+      service_area: 'Wakad, Thergaon & Punawale, Pune',
+      service_radius_km: 35.0,
+      current_latitude: 18.5987,
+      current_longitude: 73.7656,
+      working_hours: '06:30 AM - 07:30 PM',
+      is_available: true,
+      is_online: true,
+      current_work_status: 'Available',
+      verification_status: 'Verified',
+      verification_notes: 'Combine harvester specialist verified.',
+      license_number: 'MH-12-OP-2019-002',
+      document_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600',
+      hourly_compensation_rate: 350.00,
+      total_jobs_completed: 36,
+      reliability_score: 4.8,
+      aadhaar_kyc_status: 'Verified'
+    },
+    {
+      id: 23,
+      user_id: 23,
+      username: 'operator_amit',
+      full_name: 'Amit Bhosale',
+      phone: '+919822022003',
+      experience_years: 5,
+      skills: ['Precision Seed Drilling', 'Rotavator Tillage', 'Bed Making'],
+      supported_machinery: ['Rotavator', 'Seed Drill', 'Cultivator'],
+      service_area: 'Baner, Balewadi & Sus, Pune',
+      service_radius_km: 25.0,
+      current_latitude: 18.5590,
+      current_longitude: 73.7868,
+      working_hours: '07:00 AM - 06:30 PM',
+      is_available: true,
+      is_online: true,
+      current_work_status: 'Available',
+      verification_status: 'Verified',
+      verification_notes: 'Tillage and seeding certified.',
+      license_number: 'MH-12-OP-2020-003',
+      document_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600',
+      hourly_compensation_rate: 280.00,
+      total_jobs_completed: 29,
+      reliability_score: 4.7,
+      aadhaar_kyc_status: 'Verified'
+    },
+    {
+      id: 24,
+      user_id: 24,
+      username: 'operator_ganesh',
+      full_name: 'Ganesh More',
+      phone: '+919822022004',
+      experience_years: 9,
+      skills: ['Sugarcane Heavy Harvester', 'Subsoiler', 'Heavy Tractor Cultivation'],
+      supported_machinery: ['Harvester', 'Tractor', 'Cultivator', 'Rotavator'],
+      service_area: 'Hadapsar, Manjari & Phursungi, Pune',
+      service_radius_km: 40.0,
+      current_latitude: 18.5089,
+      current_longitude: 73.9259,
+      working_hours: '06:00 AM - 06:00 PM',
+      is_available: false,
+      is_online: true,
+      current_work_status: 'Busy',
+      verification_status: 'Verified',
+      verification_notes: 'Heavy machinery operator license verified.',
+      license_number: 'MH-12-OP-2017-004',
+      document_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600',
+      hourly_compensation_rate: 320.00,
+      total_jobs_completed: 62,
+      reliability_score: 4.95,
+      aadhaar_kyc_status: 'Verified'
+    },
+    {
+      id: 25,
+      user_id: 25,
+      username: 'operator_sachin',
+      full_name: 'Sachin Chavan',
+      phone: '+919822022005',
+      experience_years: 4,
+      skills: ['Orchard Boom Sprayer', 'Knapsack Power Sprayer', 'Pest Control'],
+      supported_machinery: ['Sprayer', 'Tractor', 'Cultivator'],
+      service_area: 'Wagholi, Lonikand & Bakori, Pune',
+      service_radius_km: 25.0,
+      current_latitude: 18.5808,
+      current_longitude: 73.9787,
+      working_hours: '07:00 AM - 05:30 PM',
+      is_available: false,
+      is_online: false,
+      current_work_status: 'Offline',
+      verification_status: 'Verified',
+      verification_notes: 'Spraying specialist verified.',
+      license_number: 'MH-12-OP-2021-005',
+      document_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600',
+      hourly_compensation_rate: 250.00,
+      total_jobs_completed: 18,
+      reliability_score: 4.6,
+      aadhaar_kyc_status: 'Verified'
+    }
+  ];
+
   const defaultDB = {
     users: mockUsers,
     equipment: mockEquipment,
     bookings: mockBookings,
-    operator_profiles: [defaultOperatorProfile],
+    operator_profiles: [defaultOperatorProfile, ...puneOperatorProfiles],
     operator_assignments: defaultAssignments,
     messages: [
       { id: 1, booking: 1, sender: 1, sender_name: "farmer", content: "Hi! Is the tractor service ready?", timestamp: "2026-06-18T10:05:00.000Z" },
@@ -677,8 +986,8 @@ const mockApiRouter = async (endpoint, options = {}) => {
   // 1. Login
   if (cleanEndpoint === '/api/auth/login/' && method === 'POST') {
     const { username, password } = body;
-    const user = db.users.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (user && password === 'password123') {
+    const user = db.users.find(u => u.username.toLowerCase() === username.toLowerCase() || (u.email && u.email.toLowerCase() === username.toLowerCase()));
+    if (user && (password === 'password123' || password === 'Demo@AgriRent2026' || user.password === password)) {
       const mockToken = `mock-token-${user.id}`;
       return {
         token: { access: mockToken, refresh: `mock-refresh-${user.id}` },
