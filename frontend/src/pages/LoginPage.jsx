@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Tractor, Lock, Mail, AlertCircle, RefreshCw, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Tractor, Lock, Mail, AlertCircle, RefreshCw, KeyRound, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage({ onNavigate }) {
   const { login, forgotPassword, resetPassword } = useAuth();
@@ -9,6 +9,8 @@ export default function LoginPage({ onNavigate }) {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -22,11 +24,15 @@ export default function LoginPage({ onNavigate }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) return;
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
+      setErrorMsg("Please enter both email address and password.");
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
     try {
-      await login(email, password);
+      await login(cleanEmail, password);
     } catch (e) {
       setErrorMsg(e.message || "Login failed. Check your email and password.");
     } finally {
@@ -36,15 +42,19 @@ export default function LoginPage({ onNavigate }) {
 
   const handleSendResetEmail = async (e) => {
     e.preventDefault();
-    if (!forgotEmail) return;
+    const cleanForgotEmail = forgotEmail.trim();
+    if (!cleanForgotEmail) {
+      setErrorMsg("Please enter your registered email address.");
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await forgotPassword(forgotEmail);
+      const res = await forgotPassword(cleanForgotEmail);
       setResetTokenSent(true);
       setSuccessMsg(res.message || "If an account with that email exists, reset instructions have been dispatched.");
     } catch (e) {
-      setErrorMsg(e.message);
+      setErrorMsg(e.message || "Unable to dispatch reset email. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -52,7 +62,12 @@ export default function LoginPage({ onNavigate }) {
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    if (!forgotEmail || !resetToken || !newPassword) return;
+    const cleanForgotEmail = forgotEmail.trim();
+    const cleanToken = resetToken.trim();
+    if (!cleanForgotEmail || !cleanToken || !newPassword) {
+      setErrorMsg("Email, reset code, and new password are required.");
+      return;
+    }
     if (newPassword.length < 12) {
       setErrorMsg("Password must be at least 12 characters long.");
       return;
@@ -61,7 +76,7 @@ export default function LoginPage({ onNavigate }) {
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      await resetPassword(forgotEmail, resetToken, newPassword);
+      await resetPassword(cleanForgotEmail, cleanToken, newPassword);
       setSuccessMsg("Password reset successfully. You can now log in with your new password.");
       setTimeout(() => {
         setShowForgot(false);
@@ -72,7 +87,7 @@ export default function LoginPage({ onNavigate }) {
         setSuccessMsg('');
       }, 2000);
     } catch (e) {
-      setErrorMsg(e.message);
+      setErrorMsg(e.message || "Password reset failed. Token may be expired or invalid.");
     } finally {
       setLoading(false);
     }
@@ -110,7 +125,7 @@ export default function LoginPage({ onNavigate }) {
 
         {/* Regular Login Form */}
         {!showForgot ? (
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div>
               <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
               <div className="relative">
@@ -144,13 +159,20 @@ export default function LoginPage({ onNavigate }) {
                   <Lock className="w-4 h-4" />
                 </span>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="w-full pl-10 pr-4 py-3 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                  className="w-full pl-10 pr-10 py-3 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -316,34 +338,43 @@ export default function LoginPage({ onNavigate }) {
                     className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-                    Send Reset Link
+                    Send Reset Code
                   </button>
                 </div>
               </form>
             ) : (
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Reset Token</label>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Reset Code / Token</label>
                   <input
                     type="text"
                     required
                     value={resetToken}
                     onChange={(e) => setResetToken(e.target.value)}
-                    placeholder="Enter single-use reset token"
+                    placeholder="Enter code received in email"
                     className="w-full px-4 py-3 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 text-center font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">New Password (min 12 chars)</label>
-                  <input
-                    type="password"
-                    required
-                    minLength={12}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new secure password"
-                    className="w-full px-4 py-3 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      required
+                      minLength={12}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new secure password"
+                      className="w-full pl-4 pr-10 py-3 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex gap-3">
                   <button

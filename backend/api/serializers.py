@@ -1,3 +1,4 @@
+import re
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from .models import (
@@ -38,13 +39,47 @@ class UserSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('is_verified', 'is_email_verified', 'reliability_score', 'aadhaar_kyc_status', 'aadhaar_number_masked')
 
+    def validate_username(self, value):
+        trimmed = value.strip()
+        if not trimmed:
+            raise serializers.ValidationError("Username cannot be empty.")
+        if len(trimmed) < 3 or len(trimmed) > 30:
+            raise serializers.ValidationError("Username must be between 3 and 30 characters.")
+        # Reject an email as username
+        if '@' in trimmed:
+            raise serializers.ValidationError("Username cannot be an email address. Choose a distinct username.")
+        # Allowed characters: alphanumeric, underscores, hyphens
+        if not re.match(r'^[a-zA-Z0-9_\-]+$', trimmed):
+            raise serializers.ValidationError("Username can only contain letters, numbers, underscores, and hyphens.")
+        if User.objects.filter(username__iexact=trimmed).exists():
+            raise serializers.ValidationError("This username is already taken. Please choose another.")
+        return trimmed
+
     def validate_email(self, value):
         normalized = value.strip().lower()
+        if not normalized:
+            raise serializers.ValidationError("Email address is required.")
         if User.objects.filter(email__iexact=normalized).exists():
             raise serializers.ValidationError("An account with this email address already exists.")
         return normalized
 
+    def validate_phone_number(self, value):
+        if not value:
+            return ""
+        raw = value.strip()
+        # Normalize spaces and dashes
+        cleaned = re.sub(r'[\s\-()]', '', raw)
+        # Check standard formats: Indian (+91... or 10 digits starting 6-9) or E.164 (+ followed by 7-15 digits)
+        if re.match(r'^(\+91)?[6-9]\d{9}$', cleaned) or re.match(r'^\+[1-9]\d{7,14}$', cleaned):
+            # Format cleanly with +91 if 10-digit Indian number
+            if len(cleaned) == 10 and cleaned[0] in '6789':
+                return f"+91{cleaned}"
+            return cleaned
+        raise serializers.ValidationError("Invalid phone number format. Enter a valid 10-digit mobile number or standard +country code number.")
+
     def validate_password(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("Password cannot be empty or contain only whitespace.")
         if len(value) < 12:
             raise serializers.ValidationError("Password must be at least 12 characters long.")
         validate_password(value)

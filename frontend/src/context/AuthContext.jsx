@@ -1026,10 +1026,18 @@ const mockApiRouter = async (endpoint, options = {}) => {
     db.users.push(newUser);
     saveMockDB(db);
     return {
-      message: "User registered successfully. A verification link has been sent to your email.",
+      message: "User registered successfully. A 6-digit verification code has been dispatched to your email address.",
       username: newUser.username,
       email: newUser.email,
       is_email_verified: false
+    };
+  }
+
+  // 2.5 Resend Verification Code
+  if (cleanEndpoint === '/api/auth/resend-code/' && method === 'POST') {
+    return {
+      message: "A fresh 6-digit verification code has been sent to your email address.",
+      email: body.email || body.username
     };
   }
 
@@ -2502,6 +2510,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const resendVerificationCode = async (emailOrUsername) => {
+    setError(null);
+    try {
+      const data = await apiFetch('/api/auth/resend-code/', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: emailOrUsername,
+          username: emailOrUsername
+        })
+      });
+      return data;
+    } catch (e) {
+      setError(e.message);
+      throw e;
+    }
+  };
+
   const verifyOtp = verifyEmail;
 
   const logout = async () => {
@@ -2557,6 +2582,7 @@ export const AuthProvider = ({ children }) => {
       register,
       verifyEmail,
       verifyOtp,
+      resendVerificationCode,
       logout,
       forgotPassword,
       resetPassword,

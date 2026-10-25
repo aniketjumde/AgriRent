@@ -18,6 +18,7 @@ class User(AbstractUser):
     is_email_verified = models.BooleanField(default=False)
     email_verification_token = models.CharField(max_length=128, blank=True, null=True)
     email_verification_sent_at = models.DateTimeField(blank=True, null=True)
+    verification_attempts = models.IntegerField(default=0)
     password_reset_token = models.CharField(max_length=128, blank=True, null=True)
     password_reset_sent_at = models.DateTimeField(blank=True, null=True)
     

@@ -32,7 +32,7 @@ class SecureAuthTestSuite(TestCase):
             is_email_verified=False
         )
         self.unverified_user.set_password(self.strong_password)
-        self.raw_verify_token = "secure-unique-verification-token-xyz123"
+        self.raw_verify_token = "482910"
         self.unverified_user.email_verification_token = hash_token(self.raw_verify_token)
         self.unverified_user.email_verification_sent_at = timezone.now()
         self.unverified_user.save()
@@ -68,6 +68,50 @@ class SecureAuthTestSuite(TestCase):
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('email', res.data)
 
+    def test_duplicate_username_rejected(self):
+        res = self.client.post('/api/auth/register/', {
+            'username': 'verified_farmer',
+            'email': 'new.different@agrirent.demo',
+            'password': 'StrongPassword#2026',
+            'role': 'Farmer'
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('username', res.data)
+
+    def test_email_as_username_rejected(self):
+        res = self.client.post('/api/auth/register/', {
+            'username': 'user@domain.com',
+            'email': 'user@domain.com',
+            'password': 'StrongPassword#2026',
+            'role': 'Farmer'
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('username', res.data)
+
+    def test_phone_number_validation(self):
+        # Valid Indian 10 digits
+        res = self.client.post('/api/auth/register/', {
+            'username': 'phone_test_1',
+            'email': 'phone1@agrirent.demo',
+            'password': 'StrongPassword#2026',
+            'phone_number': '9822123456',
+            'role': 'Farmer'
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        u = User.objects.get(username='phone_test_1')
+        self.assertEqual(u.phone_number, '+919822123456')
+
+        # Invalid phone format
+        res2 = self.client.post('/api/auth/register/', {
+            'username': 'phone_test_2',
+            'email': 'phone2@agrirent.demo',
+            'password': 'StrongPassword#2026',
+            'phone_number': '12345',
+            'role': 'Farmer'
+        }, format='json')
+        self.assertEqual(res2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('phone_number', res2.data)
+
     def test_weak_password_rejected(self):
         res = self.client.post('/api/auth/register/', {
             'username': 'weak_user',
@@ -100,7 +144,7 @@ class SecureAuthTestSuite(TestCase):
         user = User.objects.get(username='certified_operator')
         self.assertTrue(OperatorProfile.objects.filter(user=user).exists())
 
-    # --- 2. EMAIL VERIFICATION TESTS ---
+    # --- 2. EMAIL VERIFICATION & RESEND TESTS ---
 
     def test_successful_email_verification(self):
         res = self.client.post('/api/auth/verify-email/', {
@@ -126,7 +170,7 @@ class SecureAuthTestSuite(TestCase):
         self.assertFalse(user.is_email_verified)
 
     def test_expired_verification_token_rejected(self):
-        self.unverified_user.email_verification_sent_at = timezone.now() - timedelta(hours=25)
+        self.unverified_user.email_verification_sent_at = timezone.now() - timedelta(minutes=6)
         self.unverified_user.save()
         
         res = self.client.post('/api/auth/verify-email/', {
@@ -148,6 +192,24 @@ class SecureAuthTestSuite(TestCase):
             'token': self.raw_verify_token
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_resend_verification_code_and_cooldown(self):
+        # Initial resend right after creation should enforce 60s cooldown
+        cooldown_res = self.client.post('/api/auth/resend-code/', {
+            'email': 'unverified.farmer@agrirent.demo'
+        }, format='json')
+        self.assertEqual(cooldown_res.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertIn('wait', cooldown_res.data['error'].lower())
+
+        # Fast forward time past 60 seconds
+        self.unverified_user.email_verification_sent_at = timezone.now() - timedelta(seconds=65)
+        self.unverified_user.save()
+
+        success_res = self.client.post('/api/auth/resend-code/', {
+            'email': 'unverified.farmer@agrirent.demo'
+        }, format='json')
+        self.assertEqual(success_res.status_code, status.HTTP_200_OK)
+        self.assertIn('fresh', success_res.data['message'].lower())
 
     # --- 3. LOGIN TESTS ---
 
@@ -267,11 +329,6 @@ class SecureAuthTestSuite(TestCase):
         self.assertEqual(res.data['message'], res_fake.data['message'])
 
     def test_password_reset_flow(self):
-        # Trigger forgot password
-        self.client.post('/api/auth/forgot-password/', {
-            'email': 'verified.farmer@agrirent.demo'
-        }, format='json')
-        
         # In unit test, manually set token
         raw_reset_token = "valid-secret-reset-token-789"
         self.verified_user.password_reset_token = hash_token(raw_reset_token)

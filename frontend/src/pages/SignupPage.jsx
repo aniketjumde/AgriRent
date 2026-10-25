@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Tractor, User, Mail, Phone, Lock, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Tractor, User, Mail, Phone, Lock, Eye, EyeOff, AlertCircle, RefreshCw, CheckCircle2, RotateCcw } from 'lucide-react';
 
 export default function SignupPage({ onNavigate }) {
-  const { register, verifyEmail } = useAuth();
+  const { register, verifyEmail, resendVerificationCode } = useAuth();
   const { t } = useLanguage();
 
   // Signup form inputs
@@ -12,33 +12,106 @@ export default function SignupPage({ onNavigate }) {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('Farmer');
+
+  // Password visibility toggle
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Field-level error messages
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Flow control states
   const [verifyScreen, setVerifyScreen] = useState(false);
-  const [verificationToken, setVerificationToken] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+
+  // Resend cooldown timer
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // UI status
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
 
+  // Timer tick for resend cooldown
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  // Client-side field validation
+  const validateForm = () => {
+    const errors = {};
+    const trimmedUsername = username.trim();
+
+    // Username validation
+    if (!trimmedUsername) {
+      errors.username = "Username is required.";
+    } else if (trimmedUsername.length < 3 || trimmedUsername.length > 30) {
+      errors.username = "Username must be between 3 and 30 characters.";
+    } else if (trimmedUsername.includes('@')) {
+      errors.username = "Username cannot be an email address.";
+    } else if (!/^[a-zA-Z0-9_\-]+$/.test(trimmedUsername)) {
+      errors.username = "Only letters, numbers, underscores, and hyphens are allowed.";
+    }
+
+    // Email validation
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      errors.email = "Email address is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      errors.email = "Please enter a valid email address (e.g., name@example.com).";
+    }
+
+    // Phone validation (optional but validated if provided)
+    if (phone.trim()) {
+      const cleanPhone = phone.replace(/[\s\-()]/g, '');
+      if (!/^(\+91)?[6-9]\d{9}$/.test(cleanPhone) && !/^\+[1-9]\d{7,14}$/.test(cleanPhone)) {
+        errors.phone = "Enter a valid 10-digit Indian number (+91) or international format (+).";
+      }
+    }
+
+    // Password validation
+    if (!password) {
+      errors.password = "Password is required.";
+    } else if (password.trim() !== password || password.trim().length === 0) {
+      errors.password = "Password cannot be empty or contain only whitespace.";
+    } else if (password.length < 12) {
+      errors.password = "Password must be at least 12 characters long.";
+    }
+
+    // Confirm password validation
+    if (password !== confirmPassword) {
+      errors.confirmPassword = "Passwords do not match.";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    if (!username || !email || !password) {
-      setErrorMsg("Username, email, and password are required.");
-      return;
-    }
-    if (password.length < 12) {
-      setErrorMsg("Password must be at least 12 characters long.");
-      return;
-    }
-    setLoading(true);
     setErrorMsg('');
+    setInfoMsg('');
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
     try {
-      await register(username, email, password, role, phone);
+      const trimmedUsername = username.trim();
+      const normalizedEmail = email.trim().toLowerCase();
+      const res = await register(trimmedUsername, normalizedEmail, password, role, phone.trim());
       setVerifyScreen(true);
-      setInfoMsg("Registration successful! A secure verification link and code has been sent to your email.");
+      setResendCooldown(60);
+      setInfoMsg(res.message || "Registration successful! A 6-digit verification code has been dispatched to your email address.");
     } catch (e) {
       setErrorMsg(e.message || "Registration failed. Check if username or email is already taken.");
     } finally {
@@ -48,17 +121,33 @@ export default function SignupPage({ onNavigate }) {
 
   const handleVerify = async (e) => {
     e.preventDefault();
-    if (!verificationToken) {
-      setErrorMsg("Please enter the verification code sent to your email.");
+    if (!verificationCode.trim()) {
+      setErrorMsg("Please enter the 6-digit verification code sent to your email.");
       return;
     }
     setLoading(true);
     setErrorMsg('');
     try {
-      await verifyEmail(email, verificationToken);
-      setInfoMsg(t('verificationSuccess') || "Email verified successfully! Redirecting...");
+      await verifyEmail(email.trim().toLowerCase(), verificationCode.trim());
+      setInfoMsg("Email verified successfully! Entering your dashboard...");
     } catch (e) {
-      setErrorMsg(e.message || "Invalid or expired verification token.");
+      setErrorMsg(e.message || "Invalid or expired verification code.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (resendCooldown > 0 || loading) return;
+    setLoading(true);
+    setErrorMsg('');
+    setInfoMsg('');
+    try {
+      const res = await resendVerificationCode(email.trim().toLowerCase());
+      setResendCooldown(60);
+      setInfoMsg(res.message || "A fresh 6-digit verification code has been dispatched to your email.");
+    } catch (e) {
+      setErrorMsg(e.message || "Could not resend verification code. Please try again shortly.");
     } finally {
       setLoading(false);
     }
@@ -96,9 +185,11 @@ export default function SignupPage({ onNavigate }) {
 
         {/* 1. Register input details screen */}
         {!verifyScreen ? (
-          <form onSubmit={handleRegisterSubmit} className="space-y-4">
+          <form onSubmit={handleRegisterSubmit} className="space-y-4" noValidate>
             <div>
-              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Username</label>
+              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
+                Username <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                   <User className="w-4 h-4" />
@@ -107,15 +198,25 @@ export default function SignupPage({ onNavigate }) {
                   type="text"
                   required
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Create username"
-                  className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    if (fieldErrors.username) setFieldErrors({ ...fieldErrors, username: null });
+                  }}
+                  placeholder="e.g. kisan_suresh"
+                  className={`w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
+                    fieldErrors.username ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
+                  }`}
                 />
               </div>
+              {fieldErrors.username && (
+                <p className="text-[11px] text-red-500 mt-1">{fieldErrors.username}</p>
+              )}
             </div>
 
             <div>
-              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Email Address (Required)</label>
+              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
+                Email Address <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                   <Mail className="w-4 h-4" />
@@ -124,15 +225,25 @@ export default function SignupPage({ onNavigate }) {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter email address"
-                  className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: null });
+                  }}
+                  placeholder="name@example.com"
+                  className={`w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
+                    fieldErrors.email ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
+                  }`}
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="text-[11px] text-red-500 mt-1">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div>
-              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Phone Number</label>
+              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
+                Phone Number (Optional)
+              </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                   <Phone className="w-4 h-4" />
@@ -140,29 +251,91 @@ export default function SignupPage({ onNavigate }) {
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="e.g. +91 98765 43210"
-                  className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    if (fieldErrors.phone) setFieldErrors({ ...fieldErrors, phone: null });
+                  }}
+                  placeholder="e.g. +91 98220 11001"
+                  className={`w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
+                    fieldErrors.phone ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
+                  }`}
                 />
               </div>
+              {fieldErrors.phone && (
+                <p className="text-[11px] text-red-500 mt-1">{fieldErrors.phone}</p>
+              )}
             </div>
 
             <div>
-              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Password (Min 12 Characters)</label>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  Password <span className="text-red-500">*</span>
+                </label>
+                <span className="text-[10px] text-slate-400">Min. 12 characters</span>
+              </div>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                   <Lock className="w-4 h-4" />
                 </span>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   minLength={12}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create secure password (12+ chars)"
-                  className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (fieldErrors.password) setFieldErrors({ ...fieldErrors, password: null });
+                  }}
+                  placeholder="Create secure password (12+ characters)"
+                  className={`w-full pl-10 pr-10 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
+                    fieldErrors.password ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
+                  }`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
+              {fieldErrors.password && (
+                <p className="text-[11px] text-red-500 mt-1">{fieldErrors.password}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
+                Confirm Password <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                  <Lock className="w-4 h-4" />
+                </span>
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (fieldErrors.confirmPassword) setFieldErrors({ ...fieldErrors, confirmPassword: null });
+                  }}
+                  placeholder="Re-enter your password"
+                  className={`w-full pl-10 pr-10 py-2.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 text-slate-800 dark:text-slate-100 ${
+                    fieldErrors.confirmPassword ? 'border border-red-400 focus:ring-red-400' : 'focus:ring-emerald-500'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {fieldErrors.confirmPassword && (
+                <p className="text-[11px] text-red-500 mt-1">{fieldErrors.confirmPassword}</p>
+              )}
             </div>
 
             {/* Role select */}
@@ -208,7 +381,7 @@ export default function SignupPage({ onNavigate }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+              className="w-full py-3 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm mt-2"
             >
               {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
               {t('signup')}
@@ -226,12 +399,15 @@ export default function SignupPage({ onNavigate }) {
             </div>
           </form>
         ) : (
-          /* 2. Verification Token Screen */
+          /* 2. Verification Code Screen */
           <form onSubmit={handleVerify} className="space-y-6">
             <div className="text-center space-y-2">
               <h3 className="font-extrabold text-lg text-slate-800 dark:text-slate-100">Verify Your Email</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Please enter the verification token or code sent to <strong className="text-emerald-600">{email}</strong>.
+                A 6-digit verification code has been dispatched to <strong className="text-emerald-600 dark:text-emerald-400">{email}</strong>.
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Code expires in <span className="font-semibold text-amber-500">5 minutes</span>.
               </p>
             </div>
 
@@ -239,29 +415,46 @@ export default function SignupPage({ onNavigate }) {
               <input
                 type="text"
                 required
-                value={verificationToken}
-                onChange={(e) => setVerificationToken(e.target.value)}
-                placeholder="Enter verification code or token"
-                className="w-full py-3.5 text-center text-sm font-mono tracking-wider font-bold rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700"
+                maxLength={6}
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="Enter 6-digit code"
+                className="w-full py-3.5 text-center text-xl font-mono tracking-widest font-black rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700"
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-              Verify & Enter Dashboard
-            </button>
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
+                Verify & Enter Dashboard
+              </button>
 
-            <div className="text-center">
               <button
                 type="button"
-                onClick={() => setVerifyScreen(false)}
-                className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                onClick={handleResendCode}
+                disabled={resendCooldown > 0 || loading}
+                className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
               >
-                Change Registration Details
+                <RotateCcw className="w-3.5 h-3.5" />
+                {resendCooldown > 0 ? `Resend Code in ${resendCooldown}s` : "Didn't receive code? Resend"}
+              </button>
+            </div>
+
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setVerifyScreen(false);
+                  setErrorMsg('');
+                  setInfoMsg('');
+                }}
+                className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium"
+              >
+                ← Edit registration details
               </button>
             </div>
           </form>
