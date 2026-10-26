@@ -74,10 +74,10 @@ export default function AdminDashboard() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-            Admin Panel 🛡️
+            Platform Administration 🛡️
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            System administration, listings verification queue, user analytics, and platform tickets.
+            Review new machine listings, verify operator certifications, manage escrow funds, and resolve support tickets.
           </p>
         </div>
         <button
