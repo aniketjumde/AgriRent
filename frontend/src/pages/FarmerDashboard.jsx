@@ -1293,7 +1293,7 @@ export default function FarmerDashboard() {
                 <div>
                   <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                     <Bot className="w-5 h-5 text-emerald-600" />
-                    Equipment Match Advisor
+                    AI Suitability Advisor
                   </h3>
                   <p className="text-[10px] text-slate-450 mt-1">Request custom KNN suggestion based on crop and tasks. Output sets catalog filters!</p>
 
@@ -1423,7 +1423,7 @@ export default function FarmerDashboard() {
               {weatherData && (
                 <div className="glass p-5 rounded-2xl border border-slate-200 dark:border-slate-850 shadow-sm space-y-4">
                   <h4 className="text-xs font-black uppercase text-emerald-650 dark:text-emerald-450 tracking-wider flex items-center gap-1">
-                    🌤️ 5-Day Weather & Sowing Forecast
+                    🌤️ Weather-Aware Sowing Advisor
                   </h4>
                   <div className="flex justify-between items-center text-xs">
                     <span>Location: <strong>{weatherData.location}</strong></span>
@@ -2312,90 +2312,51 @@ export default function FarmerDashboard() {
           </div>
 
           {/* Right Side: Chat Window */}
-          <div className="lg:col-span-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-md flex flex-col justify-between h-[480px] overflow-hidden">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-850/60">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-bold text-slate-850 dark:text-slate-100 flex items-center gap-1.5">
-                  <MessageCircle className="w-4 h-4 text-emerald-600" />
-                  Equipment & Driver Messaging
-                </h3>
-                {activeChatBooking && (
-                  <button 
-                    onClick={() => setActiveChatBooking(null)}
-                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+          <div className="lg:col-span-4 glass p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between h-[450px]">
+            <div>
+              <h3 className="text-md font-bold text-slate-850 dark:text-slate-100 flex items-center gap-1.5 mb-4">
+                <MessageCircle className="w-5 h-5 text-emerald-600" />
+                Chat Support Panel
+              </h3>
               
               {activeChatBooking ? (
-                <div className="text-xs space-y-0.5">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeChatBooking.equipment_details?.title}</span>
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                      #{activeChatBooking.id}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Owner: {activeChatBooking.equipment_details?.owner_name || 'Owner'}
-                    {activeChatBooking.operator_assigned && " • Driver assigned"}
-                  </p>
+                <div className="text-xs border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">
+                  Discussing: <strong className="text-slate-700 dark:text-slate-350">{activeChatBooking.equipment_details?.title}</strong>
                 </div>
               ) : (
-                <p className="text-xs text-slate-400 italic">Select 'Chat' on any booking card to coordinate with the machine owner or field operator.</p>
+                <p className="text-xs text-slate-400 italic text-center py-16">Select a booking log's chat button to communicate with the equipment owner.</p>
               )}
             </div>
 
-            {activeChatBooking ? (
+            {activeChatBooking && (
               <>
-                <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/40 dark:bg-slate-950/40 no-scrollbar">
-                  {chatMessages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-4">
-                      <p className="text-xs text-slate-400">No messages yet. Send a message to coordinate timing or field directions.</p>
+                <div className="flex-1 overflow-y-auto space-y-2.5 pr-2 mb-4 max-h-[250px] no-scrollbar">
+                  {chatMessages.map(msg => (
+                    <div key={msg.id} className={`flex ${msg.sender_name === user?.username ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[85%] px-3 py-1.5 rounded-xl text-xs ${
+                        msg.sender_name === user?.username 
+                          ? 'bg-emerald-600 text-white rounded-br-none' 
+                          : 'bg-white dark:bg-slate-850 text-slate-805 dark:text-slate-100 border border-slate-100 dark:border-slate-800 rounded-bl-none shadow-sm'
+                      }`}>
+                        <p>{msg.content}</p>
+                      </div>
                     </div>
-                  ) : (
-                    chatMessages.map(msg => {
-                      const isMe = (msg.sender_name === user?.username || msg.sender === user?.id);
-                      return (
-                        <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                          <span className="text-[9px] font-bold text-slate-400 mb-0.5 px-1">
-                            {isMe ? 'You (Farmer)' : msg.sender_name}
-                          </span>
-                          <div className={`max-w-[85%] px-3.5 py-2 rounded-2xl text-xs leading-relaxed shadow-xs ${
-                            isMe 
-                              ? 'bg-emerald-600 text-white rounded-tr-xs' 
-                              : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/70 dark:border-slate-700/70 rounded-tl-xs'
-                          }`}>
-                            <p>{msg.content}</p>
-                          </div>
-                          <span className="text-[8px] text-slate-400 mt-0.5 px-1">
-                            {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
-                          </span>
-                        </div>
-                      );
-                    })
-                  )}
+                  ))}
                 </div>
 
-                <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-2">
+                <form onSubmit={handleSendMessage} className="flex gap-2">
                   <input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type message to owner / operator..."
-                    className="flex-1 px-3.5 py-2 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    placeholder="Type a message..."
+                    className="flex-1 px-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none"
                   />
-                  <button type="submit" disabled={!newMessage.trim()} className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl disabled:opacity-40 transition-colors">
+                  <button type="submit" disabled={!newMessage.trim()} className="p-2 bg-emerald-600 text-white rounded-full">
                     <Send className="w-3.5 h-3.5" />
                   </button>
                 </form>
               </>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400 text-xs">
-                <MessageCircle className="w-8 h-8 text-slate-300 dark:text-slate-600 mb-2" />
-                Select any active booking to open chat
-              </div>
             )}
           </div>
         </div>
@@ -3066,7 +3027,7 @@ export default function FarmerDashboard() {
                   <p className="text-[11px] text-slate-455 mt-1">
                     {recFilterTab === 'Saved' 
                       ? 'Bookmark recommendations from the list to save them here for quick access.' 
-                      : 'Use the Equipment Match Advisor widget on the main directory page to generate suggestions.'}
+                      : 'Use the AI Suitability Advisor widget on the main directory page to generate suggestions.'}
                   </p>
                 </div>
               </div>
