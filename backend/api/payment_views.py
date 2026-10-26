@@ -284,11 +284,20 @@ def razorpay_webhook_view(request):
 @permission_classes([permissions.IsAuthenticated])
 def farmer_payment_history_view(request):
     """
-    Retrieves all payment transactions and receipts for the authenticated farmer.
+    Retrieves all payment transactions, escrow records, and receipts for all user roles:
+    - Admin: All system transactions
+    - Owner: Payments for machinery bookings belonging to this owner
+    - Operator: Assignments with compensation or related transactions
+    - Farmer: Outgoing payments and booking receipts
     """
     if request.user.role == 'Admin':
         transactions = PaymentTransaction.objects.all().order_by('-created_at')
+    elif request.user.role == 'Owner':
+        transactions = PaymentTransaction.objects.filter(booking__equipment__owner=request.user).order_by('-created_at')
+    elif request.user.role == 'Operator':
+        transactions = PaymentTransaction.objects.filter(booking__operator_assigned=request.user).order_by('-created_at')
     else:
+        # Farmer
         transactions = PaymentTransaction.objects.filter(farmer=request.user).order_by('-created_at')
 
     serializer = PaymentTransactionSerializer(transactions, many=True)
