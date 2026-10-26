@@ -1,6 +1,6 @@
 from .health_views import health_check_view
 from .upload_views import upload_equipment_image_view
-from .nearby_views import nearby_equipment_view, validate_cart_booking_view, calculate_price_quote_view
+from .nearby_views import nearby_equipment_view, validate_cart_booking_view, calculate_price_quote_view, check_equipment_availability_view
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
@@ -36,6 +36,7 @@ urlpatterns = [
 
     # Nearby Equipment & Smart Cart APIs
     path('equipment/nearby/', nearby_equipment_view, name='nearby-equipment'),
+    path('equipment/availability/', check_equipment_availability_view, name='equipment-availability-check'),
     path('pricing/quote/', calculate_price_quote_view, name='pricing-quote'),
     path('cart/validate/', validate_cart_booking_view, name='validate-cart-booking'),
 

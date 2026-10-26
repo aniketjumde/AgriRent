@@ -2353,6 +2353,111 @@ const mockApiRouter = async (endpoint, options = {}) => {
     };
   }
 
+
+  // 29. Equipment Availability Check Mock Handler
+  if (cleanEndpoint === '/api/equipment/availability/' && method === 'POST') {
+    const eqId = parseInt(body.equipment_id || body.equipment);
+    const equip = (db.equipment || []).find(e => e.id === eqId);
+    if (!equip) throw new Error('Equipment not found.');
+
+    const startDt = new Date(body.start_date);
+    const endDt = new Date(body.end_date);
+
+    if (isNaN(startDt.getTime()) || isNaN(endDt.getTime()) || endDt <= startDt) {
+      return {
+        available: false,
+        error: 'End date must be strictly after start date.',
+        reason: 'INVALID_DATE_RANGE'
+      };
+    }
+
+    if (!equip.is_available) {
+      return {
+        available: false,
+        equipment_id: equip.id,
+        equipment_title: equip.title,
+        reason: 'MAINTENANCE_OR_UNAVAILABLE',
+        message: 'This machine is currently flagged as unavailable or undergoing maintenance by its owner.'
+      };
+    }
+
+    const conflicts = (db.bookings || []).filter(b => {
+      if (b.equipment !== eqId || ['Rejected', 'Cancelled'].includes(b.status)) return false;
+      const bStart = new Date(b.start_date);
+      const bEnd = new Date(b.end_date);
+      return bStart < endDt && bEnd > startDt;
+    });
+
+    const hasConflict = conflicts.length > 0;
+    return {
+      available: !hasConflict,
+      equipment_id: equip.id,
+      equipment_title: equip.title,
+      start_date: startDt.toISOString(),
+      end_date: endDt.toISOString(),
+      has_conflict: hasConflict,
+      conflicts: conflicts.map(c => ({
+        booking_id: c.id,
+        start_date: c.start_date,
+        end_date: c.end_date,
+        status: c.status
+      })),
+      message: !hasConflict ? "Equipment is fully available for the selected dates." : "Selected dates conflict with existing bookings."
+    };
+  }
+
+  // 30. Pricing Quote Mock Handler
+  if (cleanEndpoint === '/api/pricing/quote/' && method === 'POST') {
+    const eqId = parseInt(body.equipment_id || body.equipment);
+    const equip = (db.equipment || []).find(e => e.id === eqId);
+    if (!equip) throw new Error('Equipment not found.');
+
+    const hourlyRate = parseFloat(equip.rental_price_per_hour || 1200);
+    const dailyRate = hourlyRate * 8;
+    const isDaily = body.rental_type === 'daily';
+    const duration = parseFloat(body.duration || 4);
+    const rawBase = isDaily ? (dailyRate * duration) : (hourlyRate * duration);
+    const opCharge = body.requires_operator ? (350 * Math.max(1, Math.ceil(duration / (isDaily ? 1 : 8)))) : 0;
+    const transportCharge = body.delivery_option === 'Delivery' ? 500 : 0;
+    const insCharge = body.insurance_opt_in ? (150 * (isDaily ? duration : Math.max(1, Math.ceil(duration / 24)))) : 0;
+    const subtotal = rawBase + opCharge + transportCharge + insCharge;
+    const taxes = Math.round(subtotal * 0.05);
+    const estimatedTotal = subtotal + taxes;
+
+    return {
+      quote_id: 'qte_' + Math.random().toString(36).substring(2, 10),
+      quote_expires_at: new Date(Date.now() + 15 * 60000).toISOString(),
+      equipment_id: equip.id,
+      equipment_title: equip.title,
+      equipment_category: equip.category,
+      equipment_image: equip.image_url,
+      owner_id: equip.owner,
+      owner_name: 'Equipment Owner',
+      distance_km: 12.5,
+      start_date: body.start_date,
+      end_date: body.end_date,
+      pricing_breakdown: {
+        unit_base_rate: isDaily ? dailyRate : hourlyRate,
+        rate_unit: isDaily ? 'day' : 'hour',
+        billed_units: duration,
+        raw_base_rental: rawBase,
+        season_name: 'Kharif Harvest & Rabi Sowing',
+        seasonal_factor: 1.0,
+        demand_factor: 1.0,
+        combined_multiplier: 1.0,
+        adjusted_rental: rawBase,
+        operator_charges: opCharge,
+        transport_charges: transportCharge,
+        insurance_charges: insCharge,
+        total_discounts: 0,
+        gst_tax_rate_pct: 5,
+        taxes_amount: taxes,
+        estimated_total: estimatedTotal
+      },
+      is_available: equip.is_available !== false,
+      has_conflict: false
+    };
+  }
   throw new Error(`Endpoint mock handler not found for: ${method} ${endpoint}`);
 };
 
