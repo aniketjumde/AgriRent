@@ -2,14 +2,14 @@
 
 **Environment**: Production & Local  
 **Region**: Pune, Maharashtra, India  
-**Authentication Standard**: Supabase Auth (`auth.users`) + Django REST Framework (`api_user`)  
+**Authentication Standard**: Django REST Framework JWT (`api_user`)  
 **Shared Demo Password**: `Demo@AgriRent2026`  
 
 ---
 
 ## 1. 15 Identifiable Demo Accounts (Grouped by Role)
 
-All 15 accounts have been seeded into both **Supabase PostgreSQL (`api_user`, `auth.users`, `api_operatorprofile`, `api_equipment`)** and the **Client-Side Mock/Offline State Engine**.
+All 15 accounts have been seeded into the **Client-Side Mock/Offline State Engine**.
 
 ### A. Five Farmer Accounts (Pune Agricultural Landholders)
 
@@ -59,7 +59,7 @@ python seed_demo_accounts.py
 
 ### Safety & Idempotency Features:
 1. **Zero Destructive Overwrites**: Uses Django's `update_or_create()` with exact usernames and emails. Never deletes existing users or production records.
-2. **Dual-Layer Auth Hashing**: Automatically hashes passwords using Django's PBKDF2-SHA256 (`api_user`) and synchronizes with Supabase Auth BCrypt (`auth.users` and `auth.identities`).
+2. **Secure Auth Hashing**: Automatically hashes passwords using Django's standard PBKDF2-SHA256 algorithm.
 3. **Sequence Alignment**: Resets PostgreSQL primary key sequences (`api_user_id_seq`, `api_equipment_id_seq`, etc.) to prevent primary key collision upon future signups.
 
 ---
@@ -68,7 +68,7 @@ python seed_demo_accounts.py
 
 | Workflow | Stage | Description | Executed API Endpoints | Result | Evidence |
 |---|---|---|---|---|---|
-| **Workflow A** | Farmer Discovery & Booking | `farmer_suresh` logs in, searches nearby machinery in Hinjawadi, books John Deere 5310 Tractor with `requires_operator=True`. | `POST /api/auth/login/`<br>`GET /api/equipment/nearby/?lat=18.5912&lng=73.7389`<br>`POST /api/bookings/` | **PASS (100%)** | 9 nearby machines found; Booking created in Supabase DB. |
+| **Workflow A** | Farmer Discovery & Booking | `farmer_suresh` logs in, searches nearby machinery in Hinjawadi, books John Deere 5310 Tractor with `requires_operator=True`. | `POST /api/auth/login/`<br>`GET /api/equipment/nearby/?lat=18.5912&lng=73.7389`<br>`POST /api/bookings/` | **PASS (100%)** | 9 nearby machines found; Booking created in Django DB. |
 | **Workflow B** | Operator Status & Matching | Operators `operator_rajesh`, `operator_sunil`, `operator_amit` listed online. AI Matcher scores candidates using Haversine distance, machinery skills, and reliability. | `GET /api/operator/match/<booking_id>/` | **PASS (100%)** | `operator_rajesh` matched top rank (Score: 99.6, Distance: 0.0 km). `operator_ganesh` (Busy) and `operator_sachin` (Offline) properly excluded. |
 | **Workflow C** | Machine Owner Dispatch | Machine Owner `owner_balasaheb` requests operator dispatch for the booking. Creates assignment in `REQUESTED` state. | `POST /api/operator/request/<booking_id>/` | **PASS (100%)** | Assignment created. Duplicate dispatch attempts safely blocked. |
 | **Workflow D** | Field Execution & Tracking | `operator_rajesh` accepts job and executes all 7 operational milestones with live GPS telemetry. | `POST /api/operator/jobs/<id>/accept/`<br>`PATCH /api/operator/jobs/<id>/status/`<br>`GET /api/operator/jobs/<id>/tracking/` | **PASS (100%)** | Milestones progressed: `TRAVELLING_TO_PICKUP` -> `ARRIVED_AT_PICKUP` -> `MACHINE_COLLECTED` -> `TRAVELLING_TO_FARM` -> `ARRIVED_AT_FARM` -> `IN_PROGRESS` -> `COMPLETED`. |
@@ -78,12 +78,10 @@ python seed_demo_accounts.py
 
 ## 4. Live Production URLs & Instructions
 
-- **Live Deployed Frontend (Production)**: [https://agrirent-frontend-sandy.vercel.app](https://agrirent-frontend-sandy.vercel.app)
-- **Preview Deployment**: [https://agrirent-frontend-mxezskhnz-as-projects-1fb4e3ca.vercel.app](https://agrirent-frontend-mxezskhnz-as-projects-1fb4e3ca.vercel.app)
-- **Supabase Backend Services**: Project `dtunlnhcxpvtyvumswwk` in `ap-south-1`.
+- **Live Deployed Frontend (Production)**: [http://localhost:5173](http://localhost:5173)
 
 ### Demo Login Quick-Start:
-1. Open the [AgriRent Login Page](https://agrirent-frontend-sandy.vercel.app).
+1. Open the AgriRent Login Page ().
 2. Click any of the **Quick Demo Account** buttons:
    - 🌾 **Farmer (Suresh)**: Auto-fills `farmer_suresh`
    - 🚜 **Operator (Rajesh)**: Auto-fills `operator_rajesh`

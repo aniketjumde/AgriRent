@@ -16,16 +16,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install python dependencies
 COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir gunicorn
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
 COPY . /app/
 
-# Ensure entrypoint script is executable
-RUN chmod +x /app/entrypoint.sh
-
 # Expose default port
 EXPOSE 8000
 
-# Run entrypoint script
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Run local Django development server by default
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

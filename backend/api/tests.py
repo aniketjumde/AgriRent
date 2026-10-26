@@ -298,7 +298,7 @@ class OperatorModuleTests(TestCase):
         self.assertEqual(val_res.data['items'][0]['farming_operation'], 'Plowing')
 
 
-class SupabaseStorageAndHealthTest(TestCase):
+class ImageStorageAndHealthTest(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(username='storage_farmer', phone_number='+919876599999', role='Farmer', password='Password123')

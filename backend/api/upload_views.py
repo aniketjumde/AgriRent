@@ -1,17 +1,21 @@
+import os
+import uuid
+from django.conf import settings
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 from rest_framework import status, permissions
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
-from .supabase_storage import upload_to_supabase_storage
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])
 def upload_equipment_image_view(request):
     """
-    Handles authenticated image upload to Supabase Storage.
+    Handles authenticated image upload to local media storage.
     Validates file extension, size limit (max 5MB), and user permissions.
-    Returns the public URL to be attached to Equipment, Booking, or Profile.
+    Returns the URL to be attached to Equipment, Booking, or Profile.
     """
     file_obj = request.FILES.get('file') or request.FILES.get('image')
     if not file_obj:
@@ -27,23 +31,18 @@ def upload_equipment_image_view(request):
     if file_obj.content_type not in allowed_types:
         return Response({"error": "Invalid file type. Allowed: JPEG, PNG, WebP."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # 3. Attempt upload to Supabase Storage
     try:
-        public_url = upload_to_supabase_storage(
-            file_obj=file_obj,
-            filename=file_obj.name,
-            content_type=file_obj.content_type
-        )
-        if not public_url:
-            # Fallback if Supabase storage is not configured in local dev
-            return Response({
-                "message": "Supabase credentials not configured in environment; file validated.",
-                "url": "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80&w=600"
-            })
+        ext = os.path.splitext(file_obj.name)[1] if file_obj.name else '.jpg'
+        unique_name = f"equipment/{uuid.uuid4().hex}{ext}"
+        saved_path = default_storage.save(unique_name, ContentFile(file_obj.read()))
+        file_url = default_storage.url(saved_path)
+
+        # Build absolute URL if request is available
+        full_url = request.build_absolute_uri(file_url)
 
         return Response({
-            "message": "File uploaded successfully to Supabase Storage.",
-            "url": public_url
+            "message": "File uploaded successfully.",
+            "url": full_url
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
