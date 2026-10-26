@@ -630,6 +630,15 @@ def update_booking_status_view(request, pk):
     if new_status in ['In Progress', 'Completed'] and not (is_owner or is_farmer or is_admin):
         return Response({"error": "Unauthorized change."}, status=status.HTTP_403_FORBIDDEN)
         
+    reason = request.data.get('reason', '')
+    now = timezone.now()
+
+    # Append audit trail to notes
+    status_audit_entry = f" [Status Transition] {booking.status} -> {new_status} at {now.isoformat()} by {request.user.username} ({request.user.role})"
+    if reason:
+        status_audit_entry += f" | Reason: {reason}"
+    booking.notes = (booking.notes or '') + status_audit_entry
+
     booking.status = new_status
     
     # Manage Escrow payout logic

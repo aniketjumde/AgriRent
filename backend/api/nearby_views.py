@@ -330,3 +330,84 @@ def validate_cart_booking_view(request):
         "currency": "INR",
         "has_conflicts": has_conflicts
     })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def check_equipment_availability_view(request):
+    """
+    Workflow Step 5: Check Equipment Availability.
+    Validates machinery status, maintenance, date parameters, and time slot conflicts
+    against active bookings ('Pending', 'Approved', 'In Progress').
+    """
+    equipment_id = request.data.get('equipment_id') or request.data.get('equipment')
+    if not equipment_id:
+        return Response({"error": "equipment_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    start_date_str = request.data.get('start_date')
+    end_date_str = request.data.get('end_date')
+
+    if not start_date_str or not end_date_str:
+        return Response({"error": "Both start_date and end_date are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        equipment = Equipment.objects.select_related('owner').get(pk=equipment_id)
+    except Equipment.DoesNotExist:
+        return Response({"error": f"Equipment #{equipment_id} not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        start_dt = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
+        end_dt = datetime.fromisoformat(end_date_str.replace('Z', '+00:00'))
+    except Exception as e:
+        return Response({"error": f"Invalid date format: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+    from django.utils import timezone
+    if timezone.is_naive(start_dt):
+        start_dt = timezone.make_aware(start_dt)
+    if timezone.is_naive(end_dt):
+        end_dt = timezone.make_aware(end_dt)
+
+    if end_dt <= start_dt:
+        return Response({
+            "available": False,
+            "error": "End date must be strictly after start date.",
+            "reason": "INVALID_DATE_RANGE"
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    if not equipment.is_available:
+        return Response({
+            "available": False,
+            "equipment_id": equipment.id,
+            "equipment_title": equipment.title,
+            "reason": "MAINTENANCE_OR_UNAVAILABLE",
+            "message": "This machine is currently flagged as unavailable or undergoing maintenance by its owner."
+        }, status=status.HTTP_200_OK)
+
+    overlapping_bookings = Booking.objects.filter(
+        equipment=equipment,
+        status__in=['Pending', 'Approved', 'In Progress'],
+        start_date__lt=end_dt,
+        end_date__gt=start_dt
+    ).select_related('farmer')
+
+    has_conflict = overlapping_bookings.exists()
+
+    conflicts_data = []
+    for b in overlapping_bookings:
+        conflicts_data.append({
+            "booking_id": b.id,
+            "start_date": b.start_date.isoformat(),
+            "end_date": b.end_date.isoformat(),
+            "status": b.status
+        })
+
+    return Response({
+        "available": not has_conflict,
+        "equipment_id": equipment.id,
+        "equipment_title": equipment.title,
+        "start_date": start_dt.isoformat(),
+        "end_date": end_dt.isoformat(),
+        "has_conflict": has_conflict,
+        "conflicts": conflicts_data,
+        "message": "Equipment is fully available for the selected dates." if not has_conflict else f"Selected dates conflict with {len(conflicts_data)} existing booking(s)."
+    }, status=status.HTTP_200_OK)

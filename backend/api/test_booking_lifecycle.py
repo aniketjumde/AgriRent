@@ -111,3 +111,63 @@ class BookingLifecycleTestCase(TestCase):
         self.assertEqual(booking.status, 'Cancelled')
         self.assertTrue(booking.equipment.is_available)
         self.assertEqual(booking.escrow_status, 'Refunded')
+
+    def test_step5_equipment_availability_endpoint(self):
+        start = datetime.now() + timedelta(days=5)
+        end = start + timedelta(hours=8)
+        self.client.force_authenticate(user=self.farmer)
+
+        # Check availability before any booking
+        res = self.client.post('/api/equipment/availability/', {
+            'equipment_id': self.equipment.id,
+            'start_date': start.isoformat(),
+            'end_date': end.isoformat()
+        }, format='json')
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.data['available'])
+        self.assertFalse(res.data['has_conflict'])
+
+        # Create conflicting booking
+        Booking.objects.create(
+            equipment=self.equipment,
+            farmer=self.farmer,
+            start_date=start,
+            end_date=end,
+            total_cost=3600.0,
+            status='Approved',
+            escrow_status='Held'
+        )
+
+        # Check availability during conflict
+        res_conflict = self.client.post('/api/equipment/availability/', {
+            'equipment_id': self.equipment.id,
+            'start_date': start.isoformat(),
+            'end_date': end.isoformat()
+        }, format='json')
+        self.assertEqual(res_conflict.status_code, 200)
+        self.assertFalse(res_conflict.data['available'])
+        self.assertTrue(res_conflict.data['has_conflict'])
+
+    def test_booking_approval_rejection_audit_trail(self):
+        start = datetime.now() + timedelta(days=6)
+        end = start + timedelta(hours=8)
+        booking = Booking.objects.create(
+            equipment=self.equipment,
+            farmer=self.farmer,
+            start_date=start,
+            end_date=end,
+            total_cost=3600.0,
+            status='Pending',
+            escrow_status='Held'
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.patch(f'/api/bookings/{booking.id}/status/', {
+            'status': 'Approved',
+            'reason': 'Owner verified machinery inspection passed.'
+        }, format='json')
+        self.assertEqual(res.status_code, 200)
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, 'Approved')
+        self.assertIn('Owner verified machinery inspection passed.', booking.notes)
+        self.assertIn('[Status Transition] Pending -> Approved', booking.notes)
