@@ -233,6 +233,15 @@ class SecureAuthTestSuite(TestCase):
         self.assertIn('token', res.data)
         self.assertEqual(res.data['user']['username'], 'verified_farmer')
 
+    def test_login_with_identifier_field_and_password(self):
+        res = self.client.post('/api/auth/login/', {
+            'identifier': 'verified.farmer@agrirent.demo',
+            'password': self.strong_password
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('token', res.data)
+        self.assertEqual(res.data['user']['email'], 'verified.farmer@agrirent.demo')
+
     def test_login_with_incorrect_password_fails(self):
         res = self.client.post('/api/auth/login/', {
             'email': 'verified.farmer@agrirent.demo',

@@ -200,9 +200,10 @@ def login_view(request):
     """
     email = request.data.get('email')
     username = request.data.get('username')
+    identifier_field = request.data.get('identifier')
     password = request.data.get('password')
-    
-    identifier = (email or username or '').strip()
+
+    identifier = (identifier_field or email or username or '').strip()
     if not identifier or not password:
         return Response({"error": "Email/Username and password are required."}, status=status.HTTP_400_BAD_REQUEST)
 

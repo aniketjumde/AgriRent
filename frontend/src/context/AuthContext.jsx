@@ -2829,6 +2829,7 @@ export const AuthProvider = ({ children }) => {
       const data = await apiFetch('/api/auth/login/', {
         method: 'POST',
         body: JSON.stringify({
+          identifier: emailOrUsername,
           email: emailOrUsername,
           username: emailOrUsername,
           password
