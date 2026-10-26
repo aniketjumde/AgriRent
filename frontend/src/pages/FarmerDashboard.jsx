@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Filter, Compass, Tractor, Bot, HelpCircle, MessageCircle, Mic, Star, Sparkles, X, Calendar, MapPin, RefreshCw, Send, Check, Info, ShieldAlert, ShoppingBag, Truck, CalendarDays, ArrowLeft, Bookmark, Clock } from 'lucide-react';
+import { Search, Filter, Compass, Tractor, Bot, HelpCircle, MessageCircle, Mic, Star, Sparkles, X, Calendar, MapPin, RefreshCw, Send, Check, Info, ShieldAlert, ShoppingBag, Truck, CalendarDays, ArrowLeft, Bookmark, Clock, FileText, Receipt, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import MapComponent from '../components/MapComponent';
