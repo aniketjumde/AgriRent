@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tractor, Sprout, Bot, ShieldCheck, ArrowRight, Star, Sparkles, Mic, MapPin, Search, Compass, RefreshCw, CheckCircle2, Clock, PhoneCall, HelpCircle, Layers } from 'lucide-react';
+import { Tractor, Sprout, Bot, ShieldCheck, ArrowRight, Star, Sparkles, Mic, MapPin, Search, Compass, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -626,7 +626,7 @@ export default function LandingPage({ onNavigate }) {
 
   return (
     <div className="relative min-h-screen pb-16 font-sans">
-      {/* Subtle Ambient Background Gradients */}
+      {/* Dynamic Background */}
       <div className="absolute top-[-10%] left-[-20%] w-[80%] h-[60%] rounded-full bg-emerald-500/10 blur-[150px] -z-10 animate-pulse-subtle"></div>
       <div className="absolute bottom-[-10%] right-[-20%] w-[80%] h-[60%] rounded-full bg-amber-500/10 blur-[150px] -z-10"></div>
 
@@ -637,8 +637,8 @@ export default function LandingPage({ onNavigate }) {
             <Tractor className="w-5.5 h-5.5" />
           </div>
           <div>
-            <h1 className="font-extrabold text-lg text-slate-850 dark:text-white leading-none">AgriRent AI</h1>
-            <span className="text-[10px] text-slate-400 font-extrabold tracking-wider uppercase">Farm Equipment Rental</span>
+            <h1 className="font-extrabold text-lg text-slate-800 dark:text-white leading-none">AgriRent AI</h1>
+            <span className="text-[10px] text-slate-400 font-extrabold tracking-wider uppercase">Smart Farming</span>
           </div>
         </div>
 
@@ -647,123 +647,82 @@ export default function LandingPage({ onNavigate }) {
             onClick={() => onNavigate('login')}
             className="px-4 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 font-bold text-xs shadow-sm transition-all"
           >
-            Log in
+            Log In
           </button>
           <button
             onClick={() => onNavigate('signup')}
             className="px-4 py-2 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-md hover:scale-105 transition-all"
           >
-            Create account
+            Sign Up
           </button>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-6 pt-10 pb-12 text-center space-y-5">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-emerald-200/50 dark:border-slate-800/80 bg-emerald-50/50 dark:bg-slate-900/40 text-[11px] sm:text-xs font-bold text-emerald-700 dark:text-emerald-400">
-          <Bot className="w-4 h-4 text-emerald-600" />
-          Modern machinery sharing for farmers and tractor owners
+      {/* 1. Hero Section */}
+      <div className="max-w-7xl mx-auto px-6 pt-12 pb-16 text-center space-y-6">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-emerald-200/50 dark:border-slate-800/80 bg-emerald-50/50 dark:bg-slate-900/40 text-[10px] sm:text-xs font-bold text-emerald-700 dark:text-emerald-400">
+          <Bot className="w-4 h-4 animate-bounce" />
+          Seamless Shared Agricultural Machinery & AI Forecasting
         </div>
 
-        <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight max-w-4xl mx-auto text-slate-900 dark:text-white">
-          Rent farm machinery near your field by the hour or day
+        <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight max-w-4xl mx-auto">
+          Rent High-End Farm Machinery <span className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-amber-500 bg-clip-text text-transparent">Affordably</span>
         </h2>
 
-        <p className="text-sm sm:text-base text-slate-600 dark:text-slate-350 max-w-2xl mx-auto leading-relaxed">
-          Search available tractors, harvesters, and rotavators from verified owners nearby. Book on your schedule with transparent rates and optional certified operators.
+        <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+          AgriRent AI optimizes farm equipment usage. Instantly book verified tractors, harvesters, and crop protection systems nearby, analyze crop-task suitability, and predict rental market curves.
         </p>
 
-        <div className="flex flex-wrap justify-center gap-3 pt-2">
-          <a
-            href="#interactive-demo"
-            className="px-6 py-3 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-md flex items-center gap-2 transition-all"
-          >
-            <Search className="w-4 h-4" />
-            Find equipment near you
-          </a>
+        <div className="flex justify-center gap-3 pt-2">
           <button
             onClick={() => setIsVoiceOpen(true)}
-            className="px-6 py-3 border border-slate-250 dark:border-slate-750 bg-white dark:bg-slate-900 text-slate-750 dark:text-slate-200 rounded-xl font-bold text-xs shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-all"
+            className="px-6 py-3 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg text-xs flex items-center gap-2"
           >
-            <Mic className="w-4 h-4 text-emerald-600" />
-            Book with voice assistant
+            <Mic className="w-4 h-4 animate-pulse" />
+            Try Voice Booking
           </button>
+          <a
+            href="#interactive-demo"
+            className="px-6 py-3 border border-slate-200 dark:border-slate-750 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800"
+          >
+            Explore Platform Features
+          </a>
         </div>
+      </div>
 
-        {/* 3 Step Simple Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto pt-8 text-left">
-          <div className="p-4 bg-white dark:bg-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-black text-xs mb-2">1</div>
-            <h3 className="font-bold text-xs text-slate-850 dark:text-white mb-1">Pick what you need</h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">Choose tractors, rotavators, or sprayers matching your crop acreage.</p>
-          </div>
-          <div className="p-4 bg-white dark:bg-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-black text-xs mb-2">2</div>
-            <h3 className="font-bold text-xs text-slate-850 dark:text-white mb-1">Check live availability</h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">View real machines nearby on the map with clear hourly rates and zero hidden charges.</p>
-          </div>
-          <div className="p-4 bg-white dark:bg-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-black text-xs mb-2">3</div>
-            <h3 className="font-bold text-xs text-slate-850 dark:text-white mb-1">Delivered to field</h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">Get equipment delivered to your boundary or pick up directly with protected escrow payments.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Equipment Category Filter */}
-      <section className="max-w-7xl mx-auto px-6 py-6 border-t border-slate-200/60 dark:border-slate-800/60">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
-          <div>
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white">Filter by machine type</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Select a category to narrow down available options</p>
-          </div>
-          <span className="text-xs text-slate-400 font-medium">
-            Showing {filteredListings.length} {selectedCategory ? `${selectedCategory.toLowerCase()}s` : 'total machines'}
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { label: 'All machines', value: '' },
-            { label: 'Tractors', value: 'Tractor' },
-            { label: 'Harvesters', value: 'Harvester' },
-            { label: 'Rotavators', value: 'Rotavator' },
-            { label: 'Seeders', value: 'Seeder' },
-            { label: 'Sprayers', value: 'Sprayer' },
-            { label: 'Crop protection', value: 'Crop Protection Equipment' }
-          ].map(cat => (
+      {/* 2. Equipment Categories */}
+      <div className="max-w-7xl mx-auto px-6 py-8 border-t border-slate-200/50 dark:border-slate-800/50">
+        <h3 className="text-sm font-extrabold text-slate-400 uppercase tracking-widest text-center mb-6">Machinery Categories</h3>
+        <div className="flex flex-wrap justify-center gap-3">
+          {['', 'Tractor', 'Harvester', 'Rotavator', 'Seeder', 'Sprayer', 'Crop Protection Equipment'].map(cat => (
             <button
-              key={cat.value}
-              onClick={() => setSelectedCategory(cat.value)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
-                selectedCategory === cat.value
-                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
-                  : 'bg-white dark:bg-slate-900 border-slate-250 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                selectedCategory === cat
+                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-md'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-850 text-slate-600 dark:text-slate-350 hover:bg-slate-50'
               }`}
             >
-              {cat.label}
+              {cat || "Show All Listings"}
             </button>
           ))}
         </div>
-      </section>
+      </div>
 
-      {/* Interactive Equipment Map Section */}
-      <section id="interactive-demo" className="max-w-7xl mx-auto px-6 py-8 space-y-5">
+      {/* 3. Nearby Equipment Map Section */}
+      <div id="interactive-demo" className="max-w-7xl mx-auto px-6 py-8 space-y-6">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
           <div>
             <h3 className="text-lg font-bold text-slate-850 dark:text-slate-100 flex items-center gap-2">
               <Compass className="w-5 h-5 text-emerald-600" />
-              Available equipment near your farm
+              Nearby Equipment Map
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Drag your farm marker on the map to see equipment distance and live rates.
-            </p>
+            <p className="text-xs text-slate-400">View real-time coordinates in Coimbatore. Filters apply dynamically below.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 rounded-lg border border-emerald-100 dark:border-slate-800">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Verified owner listings
-            </span>
-          </div>
+          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/20 px-3 py-1 rounded-lg border border-emerald-100 dark:border-slate-800/80">
+            Interactive Guest Preview (5 Listings Seeded)
+          </span>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -777,283 +736,205 @@ export default function LandingPage({ onNavigate }) {
             />
           </div>
 
-          <div className="lg:col-span-4 space-y-3.5 max-h-[380px] overflow-y-auto pr-1 no-scrollbar">
-            {filteredListings.length === 0 ? (
-              <div className="p-6 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                <p className="text-xs text-slate-500">No machinery found in this category.</p>
-                <button 
-                  onClick={() => setSelectedCategory('')}
-                  className="mt-2 text-xs font-bold text-emerald-600 hover:underline"
-                >
-                  View all machines
-                </button>
-              </div>
-            ) : (
-              filteredListings.map(item => (
-                <div key={item.id} className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl flex gap-3 shadow-sm hover:shadow-md transition-all">
-                  <div className="w-[110px] h-[85px] rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0 border border-slate-200 dark:border-slate-700">
-                    <img 
-                      src={item.image || item.image_url || getFallbackImage(item.category)} 
-                      alt={item.title} 
-                      onError={(e) => handleImageError(e, item.category)}
-                      style={{ width: '110px', height: '85px', objectFit: 'cover' }}
-                      className="w-full h-full object-cover" 
-                    />
-                  </div>
-                  <div className="space-y-1 flex-1 text-xs">
-                    <h4 className="font-bold text-slate-850 dark:text-slate-100 leading-snug">{item.title}</h4>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">{item.address || item.category}</p>
-                    <div className="flex justify-between items-center pt-1.5">
-                      <strong className="text-emerald-700 dark:text-emerald-400 text-xs">₹{item.rental_price_per_hour}/hr</strong>
-                      <button 
-                        onClick={handleGuestBook}
-                        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] transition-colors"
-                      >
-                        Book now
-                      </button>
-                    </div>
+          <div className="lg:col-span-4 space-y-4 max-h-[380px] overflow-y-auto pr-2 no-scrollbar">
+            {filteredListings.map(item => (
+              <div key={item.id} className="p-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-xl flex gap-3 shadow-sm hover:shadow-md transition-all">
+                <div className="w-[120px] h-[90px] rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0 border border-slate-250 dark:border-slate-700">
+                  <img 
+                    src={item.image || item.image_url || getFallbackImage(item.category)} 
+                    alt={item.title} 
+                    onError={(e) => handleImageError(e, item.category)}
+                    style={{ width: '120px', height: '90px', objectFit: 'cover' }}
+                    className="w-full h-full object-cover" 
+                  />
+                </div>
+                <div className="space-y-1 flex-1 text-xs">
+                  <h4 className="font-bold text-slate-850 dark:text-slate-100 leading-tight">{item.title}</h4>
+                  <p className="text-[10px] text-slate-400 uppercase">{item.category}</p>
+                  <div className="flex justify-between items-center pt-1">
+                    <strong className="text-emerald-600 dark:text-emerald-400">₹{item.rental_price_per_hour}/hr</strong>
+                    <button 
+                      onClick={handleGuestBook}
+                      className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-[10px]"
+                    >
+                      Book
+                    </button>
                   </div>
                 </div>
-              ))
-            )}
+              </div>
+            ))}
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* AI Assistant Tools Section */}
-      <section className="max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-emerald-600" />
-            Smart farming tools
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Use these calculators to estimate which machine you need and what rental price to expect.
-          </p>
-        </div>
+      {/* 4. AI Suitability & Smart Pricing split */}
+      <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        {/* AI Equipment Recommendation Section */}
+        <div className="glass p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md flex flex-col justify-between space-y-4">
+          <div>
+            <h3 className="text-md font-bold text-slate-850 dark:text-slate-100 flex items-center gap-2">
+              <Bot className="w-5 h-5 text-emerald-600" />
+              AI Equipment Suitability Engine
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">Select crop and task features to query ideal machinery suggestions.</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          
-          {/* Tool 1: AI Equipment Recommendation */}
-          <div className="glass p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md flex flex-col justify-between space-y-4">
-            <div>
-              <h4 className="text-sm font-bold text-slate-850 dark:text-slate-100 flex items-center gap-2">
-                <Bot className="w-4 h-4 text-emerald-600" />
-                Find the right machine for your crop
-              </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Tell us your crop and field acreage, and we will suggest the most suitable machinery.
-              </p>
+            <form onSubmit={handleRecommendationSubmit} className="space-y-3.5 mt-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-400 mb-1">Crop Type</label>
+                <select
+                  value={crop}
+                  onChange={(e) => setCrop(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                >
+                  <option>Paddy</option>
+                  <option>Wheat</option>
+                  <option>Cotton</option>
+                  <option>Sugarcane</option>
+                  <option>Maize</option>
+                  <option>Vegetables</option>
+                </select>
+              </div>
 
-              <form onSubmit={handleRecommendationSubmit} className="space-y-3.5 mt-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-600 dark:text-slate-350 mb-1">Crop type</label>
+                  <label className="block font-bold text-slate-400 mb-1">Land Size (Acres)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={size}
+                    onChange={(e) => setSize(parseFloat(e.target.value))}
+                    className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-400 mb-1">Task Type</label>
                   <select
-                    value={crop}
-                    onChange={(e) => setCrop(e.target.value)}
-                    className="w-full p-2.5 rounded-lg border border-slate-250 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                    value={task}
+                    onChange={(e) => setTask(e.target.value)}
+                    className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
                   >
-                    <option>Paddy</option>
-                    <option>Wheat</option>
-                    <option>Cotton</option>
-                    <option>Sugarcane</option>
-                    <option>Maize</option>
-                    <option>Vegetables</option>
+                    <option>Harvesting</option>
+                    <option>Tilling</option>
+                    <option>Sowing</option>
+                    <option>Spraying</option>
                   </select>
                 </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-bold text-slate-600 dark:text-slate-350 mb-1">Field size (Acres)</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0.5"
-                      value={size}
-                      onChange={(e) => setSize(parseFloat(e.target.value) || 1)}
-                      className="w-full p-2.5 rounded-lg border border-slate-250 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-bold text-slate-600 dark:text-slate-350 mb-1">Field task</label>
-                    <select
-                      value={task}
-                      onChange={(e) => setTask(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-250 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
-                    >
-                      <option>Harvesting</option>
-                      <option>Tilling</option>
-                      <option>Sowing</option>
-                      <option>Spraying</option>
-                    </select>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={recLoading}
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all text-xs"
-                >
-                  {recLoading ? "Analyzing crop requirements..." : "Calculate recommendation"}
-                </button>
-              </form>
-            </div>
-
-            {recResult && (
-              <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/70 dark:bg-slate-850/60 dark:border-slate-800 text-xs animate-fade-in text-slate-800 dark:text-slate-200">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-emerald-800 dark:text-emerald-400 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5" /> Recommended machinery
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 font-bold text-[11px]">
-                    {Math.round(recResult.confidence_score * 100)}% match
-                  </span>
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Recommended machine:</span>
-                    <strong className="text-emerald-800 dark:text-emerald-400">{recResult.recommended_category}</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Estimated field time:</span>
-                    <strong>{recResult.estimated_hours} hours</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-slate-400">Estimated rental cost:</span>
-                    <strong className="text-emerald-700 dark:text-emerald-400">₹{recResult.estimated_rental_cost}</strong>
-                  </div>
-                </div>
               </div>
-            )}
+
+              <button
+                type="submit"
+                disabled={recLoading}
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all text-xs"
+              >
+                {recLoading ? "Processing Recommendation..." : "Get AI Suitability Recommendation"}
+              </button>
+            </form>
           </div>
 
-          {/* Tool 2: Rental Rate Estimator */}
-          <div className="glass p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md flex flex-col justify-between space-y-4">
-            <div>
-              <h4 className="text-sm font-bold text-slate-850 dark:text-slate-100 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-500" />
-                Estimate rental market rates
-              </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Check prevailing hourly rental rates based on current season and village demand.
-              </p>
+          {recResult && (
+            <div className="p-4 rounded-xl border border-emerald-150 bg-emerald-50/50 dark:bg-slate-850/40 dark:border-slate-800 text-xs animate-fade-in text-slate-800 dark:text-slate-200">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5" /> Recommendation output
+                </span>
+                <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 font-bold">
+                  {Math.round(recResult.confidence_score * 100)}% Confidence
+                </span>
+              </div>
+              <div className="space-y-1 tracking-tight">
+                <div>Machinery Class: <strong className="text-emerald-800 dark:text-emerald-400">{recResult.recommended_category}</strong></div>
+                <div>Est. Rental Duration: <strong>{recResult.estimated_hours} hours</strong></div>
+                <div>Est. Rental Cost: <strong className="text-emerald-700 dark:text-emerald-400">₹{recResult.estimated_rental_cost}</strong></div>
+              </div>
+            </div>
+          )}
+        </div>
 
-              <form onSubmit={handlePricePredictionSubmit} className="space-y-3.5 mt-4 text-xs">
+        {/* Smart Price Prediction Section */}
+        <div className="glass p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md flex flex-col justify-between space-y-4">
+          <div>
+            <h3 className="text-md font-bold text-slate-850 dark:text-slate-100 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              Smart Rental Price Prediction
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">Estimate market rates using demand spikes and seasonal coefficients.</p>
+
+            <form onSubmit={handlePricePredictionSubmit} className="space-y-3.5 mt-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-400 mb-1">Equipment Type</label>
+                <select
+                  value={priceCategory}
+                  onChange={(e) => setPriceCategory(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                >
+                  <option>Tractor</option>
+                  <option>Harvester</option>
+                  <option>Rotavator</option>
+                  <option>Seeder</option>
+                  <option>Sprayer</option>
+                  <option>Crop Protection Equipment</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-600 dark:text-slate-350 mb-1">Equipment type</label>
+                  <label className="block font-bold text-slate-400 mb-1">Demand Curve</label>
                   <select
-                    value={priceCategory}
-                    onChange={(e) => setPriceCategory(e.target.value)}
-                    className="w-full p-2.5 rounded-lg border border-slate-250 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                    value={priceDemand}
+                    onChange={(e) => setPriceDemand(e.target.value)}
+                    className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
                   >
-                    <option>Tractor</option>
-                    <option>Harvester</option>
-                    <option>Rotavator</option>
-                    <option>Seeder</option>
-                    <option>Sprayer</option>
-                    <option>Crop Protection Equipment</option>
+                    <option>Low</option>
+                    <option>Medium</option>
+                    <option>High</option>
                   </select>
                 </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-bold text-slate-600 dark:text-slate-350 mb-1">Local demand</label>
-                    <select
-                      value={priceDemand}
-                      onChange={(e) => setPriceDemand(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-250 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
-                    >
-                      <option>Low</option>
-                      <option>Medium</option>
-                      <option>High</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block font-bold text-slate-600 dark:text-slate-350 mb-1">Season</label>
-                    <select
-                      value={priceSeason}
-                      onChange={(e) => setPriceSeason(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-250 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
-                    >
-                      <option>Sowing</option>
-                      <option>Harvesting</option>
-                      <option>Off-season</option>
-                    </select>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={priceLoading}
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all text-xs"
-                >
-                  {priceLoading ? "Calculating rate..." : "Check market rates"}
-                </button>
-              </form>
-            </div>
-
-            {priceResult && (
-              <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 dark:bg-slate-850/60 dark:border-slate-800 text-xs animate-fade-in text-slate-800 dark:text-slate-200">
-                <span className="block font-bold text-slate-700 dark:text-slate-300 mb-2">Estimated rate per hour</span>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200/80 dark:border-slate-800">
-                    <span className="block text-[10px] text-slate-400 mb-1">Lowest</span>
-                    <strong className="text-slate-700 dark:text-slate-300">₹{priceResult.min_price}</strong>
-                  </div>
-                  <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg shadow-sm border border-emerald-200 dark:border-slate-800">
-                    <span className="block text-[10px] text-emerald-700 dark:text-emerald-400 font-bold mb-1">Average</span>
-                    <strong className="text-emerald-700 dark:text-emerald-400 font-black">₹{priceResult.recommended_price}</strong>
-                  </div>
-                  <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-200/80 dark:border-slate-800">
-                    <span className="block text-[10px] text-slate-400 mb-1">Peak</span>
-                    <strong className="text-slate-700 dark:text-slate-300">₹{priceResult.max_price}</strong>
-                  </div>
+                <div>
+                  <label className="block font-bold text-slate-400 mb-1">Season</label>
+                  <select
+                    value={priceSeason}
+                    onChange={(e) => setPriceSeason(e.target.value)}
+                    className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+                  >
+                    <option>Sowing</option>
+                    <option>Harvesting</option>
+                    <option>Off-season</option>
+                  </select>
                 </div>
               </div>
-            )}
+
+              <button
+                type="submit"
+                disabled={priceLoading}
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all text-xs"
+              >
+                {priceLoading ? "Predicting..." : "Predict Optimal Rent Pricing"}
+              </button>
+            </form>
           </div>
 
+          {priceResult && (
+            <div className="p-4 rounded-xl border border-amber-100 bg-amber-50/20 dark:bg-slate-850/40 dark:border-slate-800 text-xs animate-fade-in text-slate-800 dark:text-slate-200">
+              <div className="grid grid-cols-3 gap-2.5 text-center mt-1">
+                <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800/80">
+                  <span className="block text-[8px] text-slate-400 uppercase leading-none mb-1">Min Price</span>
+                  <strong className="text-slate-700 dark:text-slate-300">₹{priceResult.min_price}</strong>
+                </div>
+                <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg shadow-sm border border-emerald-100 dark:border-slate-800">
+                  <span className="block text-[8px] text-emerald-600 dark:text-emerald-400 uppercase leading-none mb-1">Recommended</span>
+                  <strong className="text-emerald-700 dark:text-emerald-450">₹{priceResult.recommended_price}</strong>
+                </div>
+                <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800/80">
+                  <span className="block text-[8px] text-slate-400 uppercase leading-none mb-1">Max Price</span>
+                  <strong className="text-slate-700 dark:text-slate-300">₹{priceResult.max_price}</strong>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      </section>
 
-      {/* Trust & Guarantees Section */}
-      <section className="max-w-7xl mx-auto px-6 py-10 border-t border-slate-200/60 dark:border-slate-800/60">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center sm:text-left">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center flex-shrink-0">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-bold text-xs text-slate-850 dark:text-white mb-1">Protected payments</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">
-                Rental money stays in secure escrow until field operation is verified and complete.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center flex-shrink-0">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-bold text-xs text-slate-850 dark:text-white mb-1">On-time delivery</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">
-                Track machine transit to your farm gate with live GPS coordinates and driver status.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center flex-shrink-0">
-              <PhoneCall className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-bold text-xs text-slate-850 dark:text-white mb-1">Local support</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal">
-                Assistance available in English, Tamil, and Hindi for booking and operator requests.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      </div>
 
       {/* Voice Booking Modal Launcher Frame */}
       <VoiceBookingModal 
