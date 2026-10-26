@@ -2425,9 +2425,25 @@ const mockApiRouter = async (endpoint, options = {}) => {
     };
   }
 
-  // 25. Farmer Payment History Mock
+  // 25. Payment History Mock for All Roles (Farmer, Owner, Operator, Admin)
   if (cleanEndpoint === '/api/payments/history/' && method === 'GET') {
-    return (db.payment_transactions || []).filter(t => !currentUser || t.farmer === currentUser.id);
+    if (!currentUser) return db.payment_transactions || [];
+    if (currentUser.role === 'Admin') {
+      return db.payment_transactions || [];
+    } else if (currentUser.role === 'Owner') {
+      return (db.payment_transactions || []).filter(t => {
+        const b = db.bookings.find(bk => bk.id === t.booking);
+        return b?.equipment_details?.owner === currentUser.id;
+      });
+    } else if (currentUser.role === 'Operator') {
+      return (db.payment_transactions || []).filter(t => {
+        const b = db.bookings.find(bk => bk.id === t.booking);
+        return b?.operator_assigned === currentUser.id;
+      });
+    } else {
+      // Farmer
+      return (db.payment_transactions || []).filter(t => t.farmer === currentUser.id);
+    }
   }
 
   // 26. Razorpay Refund Request Mock

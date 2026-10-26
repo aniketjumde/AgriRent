@@ -1357,6 +1357,38 @@ export default function OperatorDashboard() {
                   </strong>
                 </div>
               </div>
+
+              {/* Verified Mission Wage Ledger */}
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-2">
+                    <span>💳</span> Operator Escrow Wage Disbursals
+                  </h4>
+                  <span className="text-[10px] bg-purple-50 dark:bg-purple-950/30 text-purple-600 dark:text-purple-400 font-bold px-2.5 py-1 rounded-lg">
+                    Direct Deposit (UPI/NEFT)
+                  </span>
+                </div>
+
+                <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                  {completedJobs.slice(0, 5).map((job) => (
+                    <div key={job.id} className="py-3 flex justify-between items-center">
+                      <div>
+                        <strong className="text-slate-800 dark:text-white">{job.machine_title}</strong>
+                        <span className="text-slate-400 block text-[10px]">Client: {job.farmer_name} • Mission #{job.id}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-black text-purple-600 dark:text-purple-400 block">+ ₹{job.compensation_amount}</span>
+                        <span className="text-[9px] font-bold text-emerald-600 uppercase">Settled</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {completedJobs.length === 0 && (
+                    <p className="text-xs text-slate-400 italic py-4 text-center">No completed mission wage settlements yet. Accept and fulfill jobs to receive automatic escrow payouts.</p>
+                  )}
+                </div>
+              </div>
+
             </div>
           )}
 

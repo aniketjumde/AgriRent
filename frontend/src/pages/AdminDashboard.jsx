@@ -8,6 +8,7 @@ export default function AdminDashboard() {
   const [unverifiedListings, setUnverifiedListings] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [analytics, setAnalytics] = useState(null);
+  const [paymentTransactions, setPaymentTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const loadAdminData = async () => {
@@ -24,6 +25,14 @@ export default function AdminDashboard() {
       // 3. Fetch admin analytics
       const stats = await apiFetch('/api/dashboard/admin/');
       setAnalytics(stats);
+
+      // 4. Fetch platform-wide payment transactions
+      try {
+        const pList = await apiFetch('/api/payments/history/');
+        setPaymentTransactions(pList || []);
+      } catch (err) {
+        console.warn("Could not load payment logs:", err);
+      }
     } catch (e) {
       console.error("Failed to load admin dashboard data:", e);
     } finally {
@@ -81,7 +90,7 @@ export default function AdminDashboard() {
 
       {/* Analytics widgets */}
       {analytics && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="glass p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
               <Landmark className="w-5 h-5" />
@@ -97,8 +106,18 @@ export default function AdminDashboard() {
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <span className="block text-[10px] text-slate-400 uppercase tracking-wider font-bold">Farmers / Owners</span>
-              <strong className="text-lg text-slate-800 dark:text-white">{analytics.total_farmers} / {analytics.total_owners}</strong>
+              <span className="block text-[10px] text-slate-400 uppercase tracking-wider font-bold">Farmers / Owners / Operators</span>
+              <strong className="text-lg text-slate-800 dark:text-white">{analytics.total_farmers} / {analytics.total_owners} / {analytics.total_operators || 0}</strong>
+            </div>
+          </div>
+
+          <div className="glass p-5 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400">
+              <Landmark className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="block text-[10px] text-slate-400 uppercase tracking-wider font-bold">Escrow In Hold</span>
+              <strong className="text-lg text-purple-600 dark:text-purple-400 font-black">₹{analytics.escrow_held || 0}</strong>
             </div>
           </div>
 

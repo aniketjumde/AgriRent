@@ -52,7 +52,9 @@ export default function OwnerDashboard() {
   const [loading, setLoading] = useState(false);
 
   // Tab State & Interactive Map State
-  const [activeTab, setActiveTab] = useState('inventory'); // 'inventory', 'forecasting'
+  const [activeTab, setActiveTab] = useState('inventory'); // 'inventory', 'forecasting', 'escrow'
+  const [paymentsList, setPaymentsList] = useState([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [expandedHealthId, setExpandedHealthId] = useState(null);
   const [selectedMapZone, setSelectedMapZone] = useState({
     name: 'Coimbatore District',
@@ -402,6 +404,125 @@ export default function OwnerDashboard() {
         </div>
       )}
 
+      {/* 4. Escrow Settlements & Payouts Tab */}
+      {activeTab === 'escrow' && (
+        <div className="space-y-6 animate-fade-in text-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-850 dark:text-white flex items-center gap-2">
+                  <span>💳</span> Owner Escrow Accounts & Machinery Rental Payouts
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Pre-authorized payments captured via Razorpay are safely held in RBI-compliant escrow. Funds auto-disburse to your bank account upon farmer mission sign-off.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-lg font-bold text-[10px]">
+                  Direct Escrow Active
+                </span>
+                <button
+                  onClick={async () => {
+                    const res = await apiFetch('/api/payments/history/');
+                    setPaymentsList(res || []);
+                  }}
+                  className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-slate-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1"
+                >
+                  <RefreshCw className="w-3 h-3" /> Refresh
+                </button>
+              </div>
+            </div>
+
+            {/* Escrow summary tiles */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Total Settled Payouts</span>
+                <div className="text-lg font-black text-emerald-600">
+                  ₹{paymentsList.filter(p => p.status === 'Captured').reduce((acc, p) => acc + parseFloat(p.amount || 0), 0)}
+                </div>
+                <span className="text-[10px] text-slate-400">Credited to connected bank</span>
+              </div>
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Pending in Escrow</span>
+                <div className="text-lg font-black text-amber-500">
+                  ₹{bookings.filter(b => b.escrow_status === 'Held' || (b.payment_status === 'Captured' && b.status !== 'Completed' && b.status !== 'Closed')).reduce((acc, b) => acc + parseFloat(b.total_cost || 0), 0)}
+                </div>
+                <span className="text-[10px] text-slate-400">Releases upon completion</span>
+              </div>
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Total Transactions</span>
+                <div className="text-lg font-black text-slate-800 dark:text-white">
+                  {paymentsList.length} Records
+                </div>
+                <span className="text-[10px] text-slate-400">Across all equipment fleet</span>
+              </div>
+            </div>
+
+            {paymentsList.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 space-y-2">
+                <p className="text-sm font-medium">No payment transactions recorded yet.</p>
+                <p className="text-xs max-w-md mx-auto">
+                  When farmers book your machinery and process payment via Razorpay, transaction receipts and escrow balances will appear here in real-time.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-800">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/80 dark:bg-slate-850/80 text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                      <th className="py-3 px-4 font-semibold">Tx ID</th>
+                      <th className="py-3 px-4 font-semibold">Machinery & Renter</th>
+                      <th className="py-3 px-4 font-semibold">Booking ID</th>
+                      <th className="py-3 px-4 font-semibold">Razorpay Payment ID</th>
+                      <th className="py-3 px-4 font-semibold">Net Payout</th>
+                      <th className="py-3 px-4 font-semibold">Status</th>
+                      <th className="py-3 px-4 font-semibold">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
+                    {paymentsList.map((tx) => (
+                      <tr key={tx.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-850/50 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-medium text-slate-900 dark:text-white">
+                          #{tx.id}
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold">
+                          <span className="block text-slate-800 dark:text-white">{tx.equipment_title || 'Equipment'}</span>
+                          <span className="text-[10px] text-slate-400 font-normal">Farmer: {tx.farmer_name || 'Renter'}</span>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-slate-500">
+                          #AGR-{tx.booking}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
+                          {tx.razorpay_payment_id || 'pay_test_active'}
+                        </td>
+                        <td className="py-3.5 px-4 font-black text-emerald-600 dark:text-emerald-400">
+                          ₹{tx.amount}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                            tx.status === 'Captured'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                              : tx.status === 'Refunded'
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
+                          }`}>
+                            {tx.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-400 text-[11px]">
+                          {new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+
       {/* Tab Selector */}
       <div className="flex border-b border-slate-200 dark:border-slate-800">
         <button
@@ -424,9 +545,19 @@ export default function OwnerDashboard() {
         >
           📈 AI Demand Forecasting & Village Maps
         </button>
+        <button
+          onClick={() => setActiveTab('escrow')}
+          className={`px-6 py-3 text-xs sm:text-sm font-black border-b-2 transition-all flex items-center gap-1.5 uppercase tracking-wider ${
+            activeTab === 'escrow' 
+              ? 'border-emerald-600 text-emerald-600 dark:border-emerald-500 dark:text-emerald-400' 
+              : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          💳 Escrow Settlements & Payouts ({paymentsList.length})
+        </button>
       </div>
 
-      {activeTab === 'inventory' ? (
+      {activeTab === 'inventory' && (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
@@ -819,7 +950,9 @@ export default function OwnerDashboard() {
         </div>
       </div>
       </>
-      ) : (
+      )}
+
+      {activeTab === 'forecasting' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in font-sans">
           {/* Left Column: District SVG Map & Details */}
           <div className="lg:col-span-8 glass p-6 rounded-2xl border border-slate-200 dark:border-slate-800/80 shadow-md space-y-6">

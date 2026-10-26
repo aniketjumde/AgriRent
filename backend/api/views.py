@@ -907,7 +907,11 @@ def admin_dashboard_analytics(request):
     bookings = Booking.objects.all()
     tickets = SupportTicket.objects.all()
     
-    total_revenue = bookings.filter(status='Completed').aggregate(Sum('total_cost'))['total_cost__sum'] or 0.0
+    # Calculate platform GMV and Escrow volume from captured payments or completed bookings
+    captured_payments_sum = PaymentTransaction.objects.filter(status='Captured').aggregate(Sum('amount'))['amount__sum'] or 0.0
+    completed_cost = bookings.filter(status='Completed').aggregate(Sum('total_cost'))['total_cost__sum'] or 0.0
+    total_revenue = max(float(captured_payments_sum), float(completed_cost))
+    escrow_held = float(bookings.filter(escrow_status='Held').aggregate(Sum('total_cost'))['total_cost__sum'] or 0.0)
     
     # Calculate utilization rate: (Completed bookings + In Progress) / Total listings (expressed as decimal or percentage)
     total_listings_count = equipment.count()
@@ -917,10 +921,12 @@ def admin_dashboard_analytics(request):
     return Response({
         "total_farmers": users.filter(role='Farmer').count(),
         "total_owners": users.filter(role='Owner').count(),
+        "total_operators": users.filter(role='Operator').count(),
         "total_equipment": total_listings_count,
         "active_rentals": bookings.filter(status='In Progress').count(),
         "completed_rentals": bookings.filter(status='Completed').count(),
-        "total_revenue": total_revenue,
+        "total_revenue": round(total_revenue, 2),
+        "escrow_held": round(escrow_held, 2),
         "equipment_utilization_rate": utilization_rate,
         "pending_verifications": equipment.filter(is_verified=False).count(),
         "open_tickets": tickets.filter(status='Open').count()
