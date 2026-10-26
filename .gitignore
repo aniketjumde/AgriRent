@@ -1,0 +1,17 @@
+# local runtime files
+.env
+.env.*
+.logs/
+.pids/
+*.sqlite3
+backend/db.sqlite3
+backend/staticfiles/
+
+# Python caches
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# editor / OS noise
+.DS_Store
+.vscode/
