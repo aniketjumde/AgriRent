@@ -821,6 +821,20 @@ export default function FarmerDashboard() {
     }
   };
 
+  const handleCloseBooking = async (bookingId) => {
+    if (!window.confirm("Are you sure you want to confirm completion and close this booking? Escrow payout will be released to the equipment owner.")) return;
+    try {
+      await apiFetch(`/api/bookings/${bookingId}/status/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'Closed', reason: 'Farmer verified work completion' })
+      });
+      alert(`Booking #${bookingId} has been successfully verified and closed.`);
+      loadDashboardData();
+    } catch (e) {
+      alert("Error closing booking: " + e.message);
+    }
+  };
+
   const handleCancelBooking = async (bookingId) => {
     if (!window.confirm("Are you sure you want to cancel this booking request?")) return;
     try {
@@ -861,6 +875,50 @@ export default function FarmerDashboard() {
     } finally {
       setAiMatchLoading(false);
     }
+  };
+
+  const handleReviewFromAdvisor = (recResult) => {
+    const cat = recResult?.recommended_category?.toLowerCase() || '';
+    const matchingListing = listings.find(l => l.category?.toLowerCase() === cat && l.is_available) ||
+                            listings.find(l => l.category?.toLowerCase().includes(cat) && l.is_available) ||
+                            listings.find(l => l.category?.toLowerCase() === cat) ||
+                            listings[0];
+
+    if (!matchingListing) {
+      alert("No machinery found in inventory matching category: " + recResult?.recommended_category);
+      return;
+    }
+
+    const durationHrs = recResult?.estimated_hours || 4.0;
+    const hourlyRate = parseFloat(matchingListing.rental_price_per_hour || 500);
+    const estBase = Math.round(hourlyRate * durationHrs);
+    const estTax = Math.round(estBase * 0.05);
+
+    const matchPayload = {
+      equipment: matchingListing,
+      operator: null,
+      match_metrics: {
+        overall_score: Math.round((recResult?.confidence_score || 0.88) * 100),
+        suitability_label: 'AI Crop Recommendation'
+      },
+      estimated_costs: {
+        base_rental: estBase,
+        operator_charges: 0,
+        transport_charges: 200,
+        subtotal: estBase,
+        tax: estTax,
+        estimated_total: estBase + estTax
+      },
+      distance_km: matchingListing.distance_km || 5.2,
+      start_date: new Date(Date.now() + 2 * 3600 * 1000).toISOString(),
+      end_date: new Date(Date.now() + (2 + durationHrs) * 3600 * 1000).toISOString(),
+      farming_operation: taskType || 'Fieldwork',
+      duration_hours: durationHrs,
+      acreage: landSize || 2.0
+    };
+
+    setSelectedReviewMatch(matchPayload);
+    setReviewModalOpen(true);
   };
 
   const handleOpenReviewForRecommendation = (rec) => {
@@ -1310,8 +1368,8 @@ export default function FarmerDashboard() {
                 )}
 
                 {aiRecResult && (
-                  <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/50 dark:bg-slate-850/40 dark:border-slate-800 text-xs animate-fade-in text-slate-800 dark:text-slate-200">
-                    <div className="flex justify-between items-center mb-2">
+                  <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/50 dark:bg-slate-850/40 dark:border-slate-800 text-xs animate-fade-in text-slate-800 dark:text-slate-200 space-y-2">
+                    <div className="flex justify-between items-center">
                       <span className="font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                         <Sparkles className="w-3.5 h-3.5 text-amber-500" /> AI Recommended
                       </span>
@@ -1319,12 +1377,20 @@ export default function FarmerDashboard() {
                         {Math.round(aiRecResult.confidence_score * 100)}% Conf
                       </span>
                     </div>
-                    <p className="mb-2">We found suitable machinery listings. Filters have been updated below!</p>
-                    <div className="space-y-1">
-                      <div>Category: <strong>{aiRecResult.recommended_category}</strong></div>
-                      <div>Recommended duration: <strong>{aiRecResult.estimated_hours} Hours ({Math.ceil(aiRecResult.estimated_hours / 8)} Days)</strong></div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">Suitable machinery identified for your {cropType} crop and {landSize} acres.</p>
+                    <div className="space-y-1 bg-white/60 dark:bg-slate-900/60 p-2.5 rounded-lg border border-emerald-100/60 dark:border-slate-800">
+                      <div>Category: <strong className="text-emerald-700 dark:text-emerald-400">{aiRecResult.recommended_category}</strong></div>
+                      <div>Estimated duration: <strong>{aiRecResult.estimated_hours} Hours ({Math.ceil(aiRecResult.estimated_hours / 8)} Days)</strong></div>
                       <div>Est. Rental Cost: <strong>₹{aiRecResult.estimated_rental_cost}</strong></div>
                     </div>
+                    {/* Direct Quick Review & Book from Advisor */}
+                    <button
+                      onClick={() => handleReviewFromAdvisor(aiRecResult)}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 mt-2"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Review & Book {aiRecResult.recommended_category}</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -1865,7 +1931,7 @@ export default function FarmerDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
               <h3 className="text-md font-bold text-slate-850 dark:text-slate-105">My Rental Requests</h3>
               <div className="flex flex-wrap gap-1.5">
-                {['All', 'Pending', 'In Progress', 'Completed', 'Rejected'].map(status => (
+                {['All', 'Pending', 'Approved', 'In Transit', 'In Progress', 'Completed', 'Closed', 'Rejected'].map(status => (
                   <button
                     key={status}
                     onClick={() => setBookingStatusFilter(status)}
@@ -1899,7 +1965,6 @@ export default function FarmerDashboard() {
               ) : (
                 bookings.filter(b => {
                   if (bookingStatusFilter === 'All') return true;
-                  if (bookingStatusFilter === 'In Progress') return b.status === 'In Progress';
                   return b.status === bookingStatusFilter;
                 }).map(b => (
                 <div key={b.id} className="p-5 bg-slate-50 dark:bg-slate-950/30 border border-slate-100 dark:border-slate-800 rounded-xl space-y-4">
@@ -2008,6 +2073,14 @@ export default function FarmerDashboard() {
                             Cancel Rent
                           </button>
                         )}
+                        {b.status === 'Completed' && (
+                          <button
+                            onClick={() => handleCloseBooking(b.id)}
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold shadow-xs"
+                          >
+                            ✓ Acknowledge & Close
+                          </button>
+                        )}
                         <button
                           onClick={() => openChat(b)}
                           className="px-2.5 py-1 bg-emerald-50 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-bold flex items-center gap-1"
@@ -2018,40 +2091,58 @@ export default function FarmerDashboard() {
                     </div>
                   </div>
 
-                  {/* Booking Status Stepper Tracking */}
-                  <div className="border-t border-slate-200/50 dark:border-slate-800/80 pt-4">
-                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
+                  {/* 12-Step Booking Lifecycle Stepper Tracking */}
+                  <div className="border-t border-slate-200/50 dark:border-slate-800/80 pt-4 overflow-x-auto no-scrollbar">
+                    <div className="flex items-center justify-between text-[9px] font-bold text-slate-400 min-w-[500px]">
                       
+                      {/* Step 1: Requested */}
                       <div className="flex flex-col items-center flex-1 relative">
                         <div className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold z-10">1</div>
-                        <span className="mt-1 text-emerald-600">Pending Approval</span>
+                        <span className="mt-1 text-emerald-600 font-extrabold">Requested</span>
                         <div className="absolute top-2.5 left-1/2 w-full h-0.5 bg-slate-200 dark:bg-slate-800 -z-0"></div>
                       </div>
 
+                      {/* Step 2: Approved / Declined */}
                       <div className="flex flex-col items-center flex-1 relative">
                         <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold z-10 ${
                           b.status === 'Rejected' || b.status === 'Cancelled' ? 'bg-red-500 text-white' :
-                          ['Approved', 'In Progress', 'Completed'].includes(b.status) ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
+                          ['Approved', 'Awaiting Dispatch', 'In Transit', 'Arrived', 'In Progress', 'Completed', 'Closed'].includes(b.status) ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
                         }`}>2</div>
-                        <span className={b.status === 'Rejected' || b.status === 'Cancelled' ? 'mt-1 text-red-500' : ['Approved', 'In Progress', 'Completed'].includes(b.status) ? 'mt-1 text-emerald-600' : 'mt-1'}>
+                        <span className={b.status === 'Rejected' || b.status === 'Cancelled' ? 'mt-1 text-red-500 font-bold' : ['Approved', 'Awaiting Dispatch', 'In Transit', 'Arrived', 'In Progress', 'Completed', 'Closed'].includes(b.status) ? 'mt-1 text-emerald-600 font-bold' : 'mt-1'}>
                           {b.status === 'Cancelled' ? 'Cancelled' : b.status === 'Rejected' ? 'Rejected' : 'Approved'}
                         </span>
                         <div className="absolute top-2.5 left-1/2 w-full h-0.5 bg-slate-200 dark:bg-slate-800 -z-0"></div>
                       </div>
 
+                      {/* Step 3: Logistics (Transit / Arrived) */}
                       <div className="flex flex-col items-center flex-1 relative">
                         <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold z-10 ${
-                          ['In Progress', 'Completed'].includes(b.status) ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
+                          ['In Transit', 'Arrived', 'In Progress', 'Completed', 'Closed'].includes(b.status) ? 'bg-emerald-600 text-white' :
+                          b.status === 'Awaiting Dispatch' ? 'bg-blue-600 text-white animate-pulse' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
                         }`}>3</div>
-                        <span className={['In Progress', 'Completed'].includes(b.status) ? 'mt-1 text-emerald-600' : 'mt-1'}>In Progress</span>
+                        <span className={['In Transit', 'Arrived', 'In Progress', 'Completed', 'Closed'].includes(b.status) ? 'mt-1 text-emerald-600 font-bold' : b.status === 'Awaiting Dispatch' ? 'mt-1 text-blue-600 font-bold' : 'mt-1'}>
+                          {b.status === 'In Transit' ? 'In Transit 🚚' : b.status === 'Arrived' ? 'Arrived 📍' : b.status === 'Awaiting Dispatch' ? 'Dispatching' : 'Transit'}
+                        </span>
                         <div className="absolute top-2.5 left-1/2 w-full h-0.5 bg-slate-200 dark:bg-slate-800 -z-0"></div>
                       </div>
 
+                      {/* Step 4: In Progress */}
+                      <div className="flex flex-col items-center flex-1 relative">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold z-10 ${
+                          ['In Progress', 'Completed', 'Closed'].includes(b.status) ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
+                        }`}>4</div>
+                        <span className={['In Progress', 'Completed', 'Closed'].includes(b.status) ? 'mt-1 text-emerald-600 font-bold' : 'mt-1'}>In Progress</span>
+                        <div className="absolute top-2.5 left-1/2 w-full h-0.5 bg-slate-200 dark:bg-slate-800 -z-0"></div>
+                      </div>
+
+                      {/* Step 5: Completed & Closed */}
                       <div className="flex flex-col items-center flex-1">
                         <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold z-10 ${
-                          b.status === 'Completed' ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
-                        }`}>4</div>
-                        <span className={b.status === 'Completed' ? 'mt-1 text-emerald-600' : 'mt-1'}>Completed</span>
+                          ['Completed', 'Closed'].includes(b.status) ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
+                        }`}>5</div>
+                        <span className={['Completed', 'Closed'].includes(b.status) ? 'mt-1 text-emerald-600 font-bold' : 'mt-1'}>
+                          {b.status === 'Closed' ? 'Closed' : 'Completed'}
+                        </span>
                       </div>
 
                     </div>
@@ -3615,6 +3706,15 @@ export default function FarmerDashboard() {
           </div>
         </div>
       )}
+
+      {/* Step 8: Booking Review & Pre-Authorization Modal */}
+      <BookingReviewModal
+        isOpen={reviewModalOpen}
+        onClose={() => setReviewModalOpen(false)}
+        matchData={selectedReviewMatch}
+        onConfirmBooking={handleConfirmDirectBooking}
+        loading={validatingCart}
+      />
 
       {/* Voice Booking launcher */}
       <VoiceBookingModal

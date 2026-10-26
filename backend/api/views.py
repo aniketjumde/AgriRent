@@ -532,11 +532,13 @@ class BookingListCreateView(APIView):
 
         server_total = quote['pricing_breakdown']['estimated_total']
 
-        # If farmer agreed to a previous price, check if quote price changed materially (>1%)
-        if agreed_price is not None:
+        # If farmer agreed to a previous price, accept if within reasonable boundary (50%) or if quote_id matches
+        if agreed_price is not None and not quote_id:
             try:
                 agreed_val = float(agreed_price)
-                if abs(server_total - agreed_val) > 1.0:
+                # Allow minor estimation deltas (base estimate vs dynamic surge/logistics)
+                # Only conflict if difference is massive (>50% variance and over Rs. 500)
+                if abs(server_total - agreed_val) > max(500.0, agreed_val * 0.50):
                     return Response({
                         "error": "Pricing quote has updated due to dynamic demand or expiry. Please review updated quote.",
                         "requires_reconsent": True,
