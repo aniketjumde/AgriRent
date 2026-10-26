@@ -470,7 +470,12 @@ export default function FarmerDashboard() {
       navigate('/dashboard/my-bookings');
       loadDashboardData();
     } catch (e) {
-      alert("Checkout booking error: " + e.message);
+      if (e.message?.toLowerCase().includes('unauthorized') || e.message?.toLowerCase().includes('credentials')) {
+        alert("Your session has expired or you are not logged in. Please log in again to confirm your booking.");
+        navigate('/login');
+      } else {
+        alert("Checkout booking error: " + e.message);
+      }
     } finally {
       setValidatingCart(false);
     }

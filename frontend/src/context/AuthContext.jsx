@@ -989,9 +989,51 @@ const mockApiRouter = async (endpoint, options = {}) => {
   const db = getMockDB();
   const token = localStorage.getItem('accessToken');
   let currentUser = null;
-  if (token && token.startsWith('mock-')) {
-    const userId = parseInt(token.replace('mock-token-', ''));
-    currentUser = db.users.find(u => u.id === userId);
+  if (token) {
+    if (token.startsWith('mock-')) {
+      const userId = parseInt(token.replace('mock-token-', ''));
+      currentUser = db.users.find(u => u.id === userId);
+    } else {
+      // Decode real JWT payload to identify user id/role when falling back to mock router
+      try {
+        const base64Url = token.split('.')[1];
+        if (base64Url) {
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(
+            atob(base64)
+              .split('')
+              .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+              .join('')
+          );
+          const decoded = JSON.parse(jsonPayload);
+          if (decoded && (decoded.user_id || decoded.id)) {
+            const uid = decoded.user_id || decoded.id;
+            currentUser = db.users.find(u => u.id === uid) || {
+              id: uid,
+              username: decoded.username || 'farmer',
+              email: decoded.email || 'farmer@agrirent.com',
+              role: decoded.role || 'Farmer',
+              phone_number: '+919876543211',
+              is_verified: true
+            };
+          }
+        }
+      } catch (e) {
+        console.warn("Could not decode active JWT in mock router:", e);
+      }
+    }
+  }
+
+  // Fallback: If still no currentUser, check if a farmer user exists or default to first Farmer
+  if (!currentUser) {
+    currentUser = db.users.find(u => u.role === 'Farmer') || db.users[0] || {
+      id: 1,
+      username: 'farmer',
+      email: 'farmer@agrirent.com',
+      role: 'Farmer',
+      phone_number: '+919876543211',
+      is_verified: true
+    };
   }
 
   const method = options.method || 'GET';
