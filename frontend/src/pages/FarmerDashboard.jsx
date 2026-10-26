@@ -522,7 +522,12 @@ export default function FarmerDashboard() {
       const bookingData = await apiFetch('/api/bookings/');
       setBookings(bookingData);
 
-      const wData = await apiFetch('/api/weather/');
+      const wParams = new URLSearchParams({
+        lat: farmerLocation?.latitude || 18.5204,
+        lng: farmerLocation?.longitude || 73.8567,
+        location: farmerLocation?.address || 'Pune, Maharashtra'
+      });
+      const wData = await apiFetch(`/api/weather/?${wParams.toString()}`);
       setWeatherData(wData);
 
       const schemesData = await apiFetch('/api/govt-schemes/');
@@ -599,6 +604,25 @@ export default function FarmerDashboard() {
       setSelectedDetailListing(null);
     }
   }, [location.pathname]);
+
+  // Refresh weather advisory when farmer location pin changes dynamically
+  useEffect(() => {
+    if (!farmerLocation?.latitude) return;
+    const refreshDynamicWeather = async () => {
+      try {
+        const wParams = new URLSearchParams({
+          lat: farmerLocation.latitude,
+          lng: farmerLocation.longitude,
+          location: farmerLocation.address || 'Pune, Maharashtra'
+        });
+        const dynamicWData = await apiFetch(`/api/weather/?${wParams.toString()}`);
+        setWeatherData(dynamicWData);
+      } catch (err) {
+        console.warn("Could not reload dynamic weather:", err);
+      }
+    };
+    refreshDynamicWeather();
+  }, [farmerLocation?.latitude, farmerLocation?.longitude, farmerLocation?.address]);
 
   useEffect(() => {
     loadDashboardData();

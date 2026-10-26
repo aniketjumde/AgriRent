@@ -464,6 +464,29 @@ export default function LandingPage({ onNavigate }) {
   const [priceResult, setPriceResult] = useState(null);
   const [priceLoading, setPriceLoading] = useState(false);
 
+  // Dynamic Landing Page Farm Pin / Geo Location
+  const [previewLocation, setPreviewLocation] = useState({
+    latitude: 18.5204,
+    longitude: 73.8567,
+    address: "Pune Agricultural Market Hub, Maharashtra"
+  });
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setPreviewLocation({
+            latitude: parseFloat(pos.coords.latitude.toFixed(4)),
+            longitude: parseFloat(pos.coords.longitude.toFixed(4)),
+            address: "Your Detected Field Location"
+          });
+        },
+        () => {},
+        { timeout: 5000 }
+      );
+    }
+  }, []);
+
   // Fetch active listings on page load
   useEffect(() => {
     const fetchListings = async () => {
@@ -706,8 +729,10 @@ export default function LandingPage({ onNavigate }) {
           <div className="lg:col-span-8 h-[380px] min-h-[350px]">
             <MapComponent 
               listings={filteredListings}
-              userLocation={{ latitude: 11.0168, longitude: 76.9558 }}
+              userLocation={previewLocation}
+              onLocationChange={(newLoc) => setPreviewLocation(prev => ({ ...prev, ...newLoc }))}
               onBookClick={handleGuestBook}
+              isDraggableFarm={true}
             />
           </div>
 
