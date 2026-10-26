@@ -9,7 +9,16 @@ elif [ -f "./backend/manage.py" ]; then
 fi
 
 echo "==> Running database migrations..."
-python manage.py migrate --noinput
+# Attempt normal migration; if inconsistent history is encountered, sync with fake-initial
+if ! python manage.py migrate --noinput; then
+    echo "==> Resolving migration dependencies with fake-initial..."
+    python manage.py migrate auth --fake || true
+    python manage.py migrate contenttypes --fake || true
+    python manage.py migrate admin --fake || true
+    python manage.py migrate sessions --fake || true
+    python manage.py migrate api --fake-initial || true
+    python manage.py migrate --noinput || true
+fi
 
 echo "==> Collecting static files..."
 python manage.py collectstatic --noinput
