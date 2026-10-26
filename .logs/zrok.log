@@ -1,0 +1,176 @@
+POST /api/v2/clientVersionCheck HTTP/1.1
+Host: api-v2.zrok.io
+User-Agent: Go-http-client/1.1
+Content-Length: 38
+Accept: application/zrok.v1+json
+Content-Type: application/zrok.v1+json
+Accept-Encoding: gzip
+
+{"clientVersion":"v2.0.8 [7d46bbfd]"}
+
+HTTP/2.0 200 OK
+Content-Length: 0
+Date: Mon, 26 Oct 2026 19:30:02 GMT
+
+
+POST /api/v2/share HTTP/1.1
+Host: api-v2.zrok.io
+User-Agent: Go-http-client/1.1
+Content-Length: 286
+Accept: application/zrok.v1+json
+Content-Type: application/zrok.v1+json
+X-Token: K18amhQFHNMh
+Accept-Encoding: gzip
+
+{"accessGrants":[],"authScheme":"none","backendMode":"proxy","basicAuthUsers":null,"envZId":"BV0bN3bgSK","nameSelections":[{"namespaceToken":"public"}],"oauthEmailDomains":null,"oauthRefreshInterval":"0s","permissionMode":"closed","shareMode":"public","target":"http://localhost:5173"}
+
+HTTP/2.0 201 Created
+Content-Length: 87
+Content-Type: application/zrok.v1+json
+Date: Mon, 26 Oct 2026 19:30:06 GMT
+
+{"frontendProxyEndpoints":["ceu60pheq7k9.shares.zrok.io"],"shareToken":"ceu60pheq7k9"}
+
+GET /edge/client/v1/version HTTP/1.1
+Host: cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443
+User-Agent: Go-http-client/1.1
+Accept: application/json
+Accept-Encoding: gzip
+
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Mon, 26 Oct 2026 19:30:06 GMT
+Server: ziti-controller/v1.6.21
+Ziti-Instance-Id: cmujlwasn00004oqcjazhtqjw
+
+{"data":{"apiVersions":{"edge":{"v1":{"apiBaseUrls":["https://cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443/edge/client/v1"],"path":"/edge/client/v1"}},"edge-client":{"v1":{"apiBaseUrls":["https://cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443/edge/client/v1"],"path":"/edge/client/v1"}},"edge-management":{"v1":{"apiBaseUrls":["https://cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443/edge/management/v1"],"path":"/edge/management/v1"}},"edge-oidc":{"v1":{"apiBaseUrls":[],"path":"/oidc"}},"health-checks":{"v1":{"apiBaseUrls":["https://cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443"],"path":"/health-checks/v1"}}},"buildDate":"2026-09-18T18:28:00Z","buildFlags":null,"capabilities":[],"revision":"1ab92962682d","runtimeVersion":"go1.26.8","version":"v1.6.21"},"meta":{}}
+
+POST /edge/client/v1/authenticate?method=cert HTTP/1.1
+Host: cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443
+User-Agent: Go-http-client/1.1
+Content-Length: 199
+Accept: application/json
+Content-Type: application/json
+Accept-Encoding: gzip
+
+{"envInfo":{"arch":"amd64","os":"linux","osRelease":"7.0.12+kali-amd64","osVersion":"#1 SMP PREEMPT_DYNAMIC Kali 7.0.12-2kali1 (2026-06-18)"},"sdkInfo":{"type":"ziti-sdk-golang","version":"v1.2.8"}}
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Mon, 26 Oct 2026 19:30:07 GMT
+Expiration-Seconds: 1800
+Expires-At: 2026-10-26 20:00:07.647827403 +0000 UTC
+Server: ziti-controller/v1.6.21
+Ziti-Instance-Id: cmujlwasn00004oqcjazhtqjw
+Zt-Session: fce34c61-fbec-4e02-8a66-ba07c9002cc3
+
+{"data":{"_links":{"self":{"href":"./api-sessions/cmvpnif8fb6yq4oqcoriceeyp"},"sessions":{"href":"./api-sessions/cmvpnif8fb6yq4oqcoriceeyp/sessions"}},"createdAt":"2026-10-26T19:30:07.647Z","id":"cmvpnif8fb6yq4oqcoriceeyp","tags":{},"updatedAt":"2026-10-26T19:30:07.647Z","authQueries":[],"authenticatorId":"AFrej3bTS","cachedLastActivityAt":"2026-10-26T19:30:07.647Z","configTypes":[],"identity":{"_links":{"auth-policies":{"href":"./auth-policies/default"},"authenticators":{"href":"./identities/BV0bN3bgSK/authenticators"},"edge-router-policies":{"href":"./identities/BV0bN3bgSK/edge-router-policies"},"edge-routers":{"href":"./identities/BV0bN3bgSK/edge-routers"},"enrollments":{"href":"./identities/BV0bN3bgSK/enrollments"},"failed-service-requests":{"href":"./identities/BV0bN3bgSK/failed-service-requests"},"posture-data":{"href":"./identities/BV0bN3bgSK/posture-data"},"self":{"href":"./identities/BV0bN3bgSK"},"service-configs":{"href":"./identities/BV0bN3bgSK/service-configs"},"service-policies":{"href":"./identities/BV0bN3bgSK/service-policies"},"services":{"href":"./identities/BV0bN3bgSK/services"}},"entity":"identities","id":"BV0bN3bgSK","name":"ajumde84@gmail.com-f0l36k5qub32-aniket@kali"},"identityId":"BV0bN3bgSK","ipAddress":"150.107.25.81","isCertExtendable":true,"isMfaComplete":false,"isMfaRequired":false,"lastActivityAt":"2026-10-26T19:30:07.485Z","token":"fce34c61-fbec-4e02-8a66-ba07c9002cc3","expirationSeconds":1800,"expiresAt":"2026-10-26T20:00:07.485Z"},"meta":{}}
+
+GET /edge/client/v1/controllers HTTP/1.1
+Host: cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443
+User-Agent: Go-http-client/1.1
+Accept: application/json
+Zt-Session: fce34c61-fbec-4e02-8a66-ba07c9002cc3
+Accept-Encoding: gzip
+
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Mon, 26 Oct 2026 19:30:07 GMT
+Expiration-Seconds: 1800
+Expires-At: 2026-10-26 20:00:07.647827403 +0000 UTC
+Server: ziti-controller/v1.6.21
+Ziti-Instance-Id: cmujlwasn00004oqcjazhtqjw
+
+{"data":[],"meta":{"filterableFields":["tags","isSystem","ctrlAddress","certPem","isOnline","id","name","fingerprint","lastJoinedAt","createdAt","updatedAt"],"pagination":{"limit":10,"offset":0,"totalCount":0}}}
+
+GET /edge/client/v1/version HTTP/1.1
+Host: cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443
+User-Agent: Go-http-client/1.1
+Accept: application/json
+Zt-Session: fce34c61-fbec-4e02-8a66-ba07c9002cc3
+Accept-Encoding: gzip
+
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Mon, 26 Oct 2026 19:30:08 GMT
+Expiration-Seconds: 1800
+Expires-At: 2026-10-26 20:00:07.647827403 +0000 UTC
+Server: ziti-controller/v1.6.21
+Ziti-Instance-Id: cmujlwasn00004oqcjazhtqjw
+
+{"data":{"apiVersions":{"edge":{"v1":{"apiBaseUrls":["https://cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443/edge/client/v1"],"path":"/edge/client/v1"}},"edge-client":{"v1":{"apiBaseUrls":["https://cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443/edge/client/v1"],"path":"/edge/client/v1"}},"edge-management":{"v1":{"apiBaseUrls":["https://cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443/edge/management/v1"],"path":"/edge/management/v1"}},"edge-oidc":{"v1":{"apiBaseUrls":[],"path":"/oidc"}},"health-checks":{"v1":{"apiBaseUrls":["https://cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443"],"path":"/health-checks/v1"}}},"buildDate":"2026-09-18T18:28:00Z","buildFlags":null,"capabilities":[],"revision":"1ab92962682d","runtimeVersion":"go1.26.8","version":"v1.6.21"},"meta":{}}
+
+GET /edge/client/v1/services?limit=500&offset=0 HTTP/1.1
+Host: cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443
+User-Agent: Go-http-client/1.1
+Accept: application/json
+Zt-Session: fce34c61-fbec-4e02-8a66-ba07c9002cc3
+Accept-Encoding: gzip
+
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Mon, 26 Oct 2026 19:30:08 GMT
+Expiration-Seconds: 1800
+Expires-At: 2026-10-26 20:00:07.647827403 +0000 UTC
+Server: ziti-controller/v1.6.21
+Ziti-Instance-Id: cmujlwasn00004oqcjazhtqjw
+
+{"data":[{"_links":{"configs":{"href":"./services/75VV5QYsXvr2K73MwI1xBF/configs"},"self":{"href":"./services/75VV5QYsXvr2K73MwI1xBF"},"service-edge-router-policies":{"href":"./services/75VV5QYsXvr2K73MwI1xBF/service-edge-router-policies"},"service-policies":{"href":"./services/75VV5QYsXvr2K73MwI1xBF/service-policies"},"terminators":{"href":"./services/75VV5QYsXvr2K73MwI1xBF/terminators"}},"createdAt":"2026-10-26T19:30:02.409Z","id":"75VV5QYsXvr2K73MwI1xBF","tags":{"zrok":"v2.0.8 [7d46bbfd]","zrokShareToken":"ceu60pheq7k9"},"updatedAt":"2026-10-26T19:30:02.409Z","config":{},"configs":["3YzPyxvuoYsff0PlyeOu74"],"encryptionRequired":true,"maxIdleTimeMillis":0,"name":"ceu60pheq7k9","permissions":["Bind"],"postureQueries":[{"isPassing":true,"policyId":"dummy bind policy: no posture checks defined","policyType":"Bind","postureQueries":[]}],"roleAttributes":null,"terminatorStrategy":"smartrouting"}],"meta":{"filterableFields":["terminatorStrategy","name","createdAt","id","tags","roleAttributes","updatedAt","isSystem","configs"],"pagination":{"limit":500,"offset":0,"totalCount":1}}}
+
+POST /edge/client/v1/sessions HTTP/1.1
+Host: cc7da54f-8086-4ff9-b96d-6137124f6380.production.netfoundry.io:443
+User-Agent: Go-http-client/1.1
+Content-Length: 53
+Accept: application/json
+Content-Type: application/json
+Zt-Session: fce34c61-fbec-4e02-8a66-ba07c9002cc3
+Accept-Encoding: gzip
+
+{"serviceId":"75VV5QYsXvr2K73MwI1xBF","type":"Bind"}
+
+HTTP/1.1 201 Created
+Content-Type: application/json
+Date: Mon, 26 Oct 2026 19:30:08 GMT
+Expiration-Seconds: 1800
+Expires-At: 2026-10-26 20:00:07.647827403 +0000 UTC
+Server: ziti-controller/v1.6.21
+Ziti-Instance-Id: cmujlwasn00004oqcjazhtqjw
+
+{"data":{"_links":{"route-path":{"href":"./sessions/cmvpnifz8b6z14oqcvfzdfwxu/route-path"},"self":{"href":"./sessions/cmvpnifz8b6z14oqcvfzdfwxu"}},"createdAt":"2026-10-26T19:30:08.612Z","id":"cmvpnifz8b6z14oqcvfzdfwxu","tags":{},"updatedAt":"2026-10-26T19:30:08.612Z","apiSession":{"_links":{"self":{"href":"./api-sessions/cmvpnif8fb6yq4oqcoriceeyp"},"sessions":{"href":"./api-sessions/cmvpnif8fb6yq4oqcoriceeyp/sessions"}},"entity":"api-sessions","id":"cmvpnif8fb6yq4oqcoriceeyp"},"apiSessionId":"cmvpnif8fb6yq4oqcoriceeyp","edgeRouters":[{"capabilities":null,"cost":0,"disabled":false,"hostname":"1ba54d52-ffdb-4ac1-8e32-dc39ca0f89a1.production.netfoundry.io","isOnline":true,"name":"AWS AP-South-1(custom config)","noTraversal":false,"supportedProtocols":{"tls":"tls://1ba54d52-ffdb-4ac1-8e32-dc39ca0f89a1.production.netfoundry.io:443"},"syncStatus":"SYNC_DONE","urls":{"tls":"tls://1ba54d52-ffdb-4ac1-8e32-dc39ca0f89a1.production.netfoundry.io:443"}},{"capabilities":null,"cost":0,"disabled":false,"hostname":"ad2b1ffe-8cee-465d-b3fc-8d1100bb5f32.production.netfoundry.io","isOnline":true,"name":"AWS EU-West-2(custom config)","noTraversal":false,"supportedProtocols":{"tls":"tls://ad2b1ffe-8cee-465d-b3fc-8d1100bb5f32.production.netfoundry.io:443"},"syncStatus":"SYNC_DONE","urls":{"tls":"tls://ad2b1ffe-8cee-465d-b3fc-8d1100bb5f32.production.netfoundry.io:443"}},{"capabilities":null,"cost":0,"disabled":false,"hostname":"92c34dbe-a505-48d8-81f9-ae47bdcad1fe.production.netfoundry.io","isOnline":true,"name":"AWS US East 1-1(custom config)","noTraversal":false,"supportedProtocols":{"tls":"tls://92c34dbe-a505-48d8-81f9-ae47bdcad1fe.production.netfoundry.io:443"},"syncStatus":"SYNC_DONE","urls":{"tls":"tls://92c34dbe-a505-48d8-81f9-ae47bdcad1fe.production.netfoundry.io:443"}},{"capabilities":null,"cost":0,"disabled":false,"hostname":"e1f3a989-daca-4ae9-8613-6046ea778240.production.netfoundry.io","isOnline":true,"name":"AWS EU-West-2-1(custom config)","noTraversal":false,"supportedProtocols":{"tls":"tls://e1f3a989-daca-4ae9-8613-6046ea778240.production.netfoundry.io:443"},"syncStatus":"SYNC_DONE","urls":{"tls":"tls://e1f3a989-daca-4ae9-8613-6046ea778240.production.netfoundry.io:443"}},{"capabilities":null,"cost":0,"disabled":false,"hostname":"2a112305-3f35-488d-8212-495a575939ba.production.netfoundry.io","isOnline":true,"name":"AWS AP-Southeast-4(custom config)","noTraversal":false,"supportedProtocols":{"tls":"tls://2a112305-3f35-488d-8212-495a575939ba.production.netfoundry.io:443"},"syncStatus":"SYNC_DONE","urls":{"tls":"tls://2a112305-3f35-488d-8212-495a575939ba.production.netfoundry.io:443"}},{"capabilities":null,"cost":0,"disabled":false,"hostname":"8e55f926-faa1-4bdd-97fa-3a4338b408dc.production.netfoundry.io","isOnline":true,"name":"AWS SA-East-1(custom config)","noTraversal":false,"supportedProtocols":{"tls":"tls://8e55f926-faa1-4bdd-97fa-3a4338b408dc.production.netfoundry.io:443"},"syncStatus":"SYNC_DONE","urls":{"tls":"tls://8e55f926-faa1-4bdd-97fa-3a4338b408dc.production.netfoundry.io:443"}},{"capabilities":null,"cost":0,"disabled":false,"hostname":"f12da3a5-c651-4dbe-ace0-67723a5dda65.production.netfoundry.io","isOnline":true,"name":"AWS EU-Central-2(custom config)","noTraversal":false,"supportedProtocols":{"tls":"tls://f12da3a5-c651-4dbe-ace0-67723a5dda65.production.netfoundry.io:443"},"syncStatus":"SYNC_DONE","urls":{"tls":"tls://f12da3a5-c651-4dbe-ace0-67723a5dda65.production.netfoundry.io:443"}},{"capabilities":null,"cost":0,"disabled":false,"hostname":"a74eb470-6aaf-4bb2-9ba0-f128fe03b753.production.netfoundry.io","isOnline":true,"name":"AWS AP-Southeast-1(Custom Config)","noTraversal":false,"supportedProtocols":{"tls":"tls://a74eb470-6aaf-4bb2-9ba0-f128fe03b753.production.netfoundry.io:443"},"syncStatus":"SYNC_DONE","urls":{"tls":"tls://a74eb470-6aaf-4bb2-9ba0-f128fe03b753.production.netfoundry.io:443"}},{"capabilities":null,"cost":0,"disabled":false,"hostname":"60042e42-5eef-4378-9ade-538b5cde57a0.production.netfoundry.io","isOnline":true,"name":"AWS US-West-1-1(custom config)","noTraversal":false,"supportedProtocols":{"tls":"tls://60042e42-5eef-4378-9ade-538b5cde57a0.production.netfoundry.io:443"},"syncStatus":"SYNC_DONE","urls":{"tls":"tls://60042e42-5eef-4378-9ade-538b5cde57a0.production.netfoundry.io:443"}}],"identityId":"BV0bN3bgSK","service":{"_links":{"configs":{"href":"./services/75VV5QYsXvr2K73MwI1xBF/configs"},"self":{"href":"./services/75VV5QYsXvr2K73MwI1xBF"},"service-edge-router-policies":{"href":"./services/75VV5QYsXvr2K73MwI1xBF/service-edge-router-policies"},"service-policies":{"href":"./services/75VV5QYsXvr2K73MwI1xBF/service-policies"},"terminators":{"href":"./services/75VV5QYsXvr2K73MwI1xBF/terminators"}},"entity":"services","id":"75VV5QYsXvr2K73MwI1xBF","name":"ceu60pheq7k9"},"serviceId":"75VV5QYsXvr2K73MwI1xBF","token":"a5ebaf36-7e50-4a06-9c00-2459b4ff90bf","type":"Bind"},"meta":{}}
+
+POST /api/v2/clientVersionCheck HTTP/1.1
+Host: api-v2.zrok.io
+User-Agent: Go-http-client/1.1
+Content-Length: 38
+Accept: application/zrok.v1+json
+Content-Type: application/zrok.v1+json
+Accept-Encoding: gzip
+
+{"clientVersion":"v2.0.8 [7d46bbfd]"}
+
+HTTP/2.0 200 OK
+Content-Length: 0
+Date: Mon, 26 Oct 2026 19:30:09 GMT
+
+
+DELETE /api/v2/unshare HTTP/1.1
+Host: api-v2.zrok.io
+User-Agent: Go-http-client/1.1
+Content-Length: 52
+Accept: application/zrok.v1+json
+Content-Type: application/zrok.v1+json
+X-Token: K18amhQFHNMh
+Accept-Encoding: gzip
+
+{"envZId":"BV0bN3bgSK","shareToken":"ceu60pheq7k9"}
+
+HTTP/2.0 200 OK
+Date: Mon, 26 Oct 2026 19:30:16 GMT
+Content-Length: 0
+
+
+[ERROR]: An error occurred (input/output error)

@@ -56,7 +56,7 @@ start_backend() {
 
   (
     cd "$ROOT_DIR"
-    . .venv/bin/activate
+    . "$ROOT_DIR/.venv/bin/activate"
     nohup python backend/manage.py runserver 0.0.0.0:8000 > "$LOG_DIR/backend.log" 2>&1 &
     echo $! > "$PID_DIR/backend.pid"
   )

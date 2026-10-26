@@ -653,8 +653,12 @@ def booking_chat_view(request, pk):
     except Booking.DoesNotExist:
         return Response({"error": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
         
-    # Check participation
-    if booking.farmer != request.user and booking.equipment.owner != request.user and request.user.role != 'Admin':
+    # Check participation: Farmer, Equipment Owner, Assigned Operator, or Admin
+    is_operator = (booking.operator_assigned == request.user)
+    if (booking.farmer != request.user and 
+        booking.equipment.owner != request.user and 
+        not is_operator and 
+        request.user.role != 'Admin'):
         return Response({"error": "Unauthorized chat access."}, status=status.HTTP_403_FORBIDDEN)
         
     if request.method == 'GET':
@@ -673,12 +677,21 @@ def booking_chat_view(request, pk):
             content=content
         )
         
-        # Create simple notification for recipient
-        recipient = booking.equipment.owner if request.user == booking.farmer else booking.farmer
-        Notification.objects.create(
-            user=recipient,
-            content=f"New chat message from {request.user.username} regarding booking #{booking.id}."
-        )
+        # Determine notifications for counterparties
+        sender = request.user
+        recipients = set()
+        if booking.farmer and booking.farmer != sender:
+            recipients.add(booking.farmer)
+        if booking.equipment.owner and booking.equipment.owner != sender:
+            recipients.add(booking.equipment.owner)
+        if booking.operator_assigned and booking.operator_assigned != sender:
+            recipients.add(booking.operator_assigned)
+
+        for recipient in recipients:
+            Notification.objects.create(
+                user=recipient,
+                content=f"New message from {sender.username} regarding booking #{booking.id} ({booking.equipment.title})."
+            )
         
         serializer = MessageSerializer(message)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
