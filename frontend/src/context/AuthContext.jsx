@@ -1429,41 +1429,65 @@ const mockApiRouter = async (endpoint, options = {}) => {
         const currentDb = getMockDB();
         let replyContent = "";
         
+        let respondentId = booking.equipment_details.owner;
+        let respondentName = booking.equipment_details.owner_name || 'owner';
+
         if (currentUser.role === 'Farmer') {
           const ownerResponses = [
-            "Hi! Thanks for the message. I will check and arrange the tractor delivery shortly.",
-            "Yes, the equipment is fully serviced and the driver details will be shared once approved.",
-            "The pricing is set via AgriRent's optimal recommendation, but I can offer field logistics assistance.",
-            "Sure, let's connect over call to finalize the route instructions."
+            "Hi! Thanks for the message. The machinery is inspected and ready for your farm.",
+            "Yes, the equipment is fully serviced and the operator details are confirmed.",
+            "We have confirmed your field requirements and are preparing logistics.",
+            "Sure, let's connect over call to coordinate pickup/transit timing."
           ];
           replyContent = ownerResponses[Math.floor(Math.random() * ownerResponses.length)];
-        } else {
+          respondentId = booking.equipment_details.owner;
+          respondentName = booking.equipment_details.owner_name || 'owner';
+        } else if (currentUser.role === 'Owner') {
           const farmerResponses = [
-            "Great, thanks! I am preparing the field bounds for the harvester.",
-            "Perfect. Please let me know once the driver starts.",
-            "Thank you for approving the request, looking forward to it.",
-            "Understood, I will do self-pickup as configured."
+            "Great, thanks! I am preparing the field bounds for the machinery.",
+            "Perfect. Please let me know once the machine is dispatched.",
+            "Thank you for approving the request, looking forward to the field work.",
+            "Understood, farm access gate is open for delivery."
           ];
           replyContent = farmerResponses[Math.floor(Math.random() * farmerResponses.length)];
+          respondentId = booking.farmer;
+          respondentName = booking.farmer_name || 'farmer';
+        } else {
+          // Operator or Admin
+          const counterpartResponses = [
+            "Coordinates received. Will meet you at the field entrance.",
+            "Noted on field timing. Proceeding as scheduled.",
+            "Understood, thanks for the update!"
+          ];
+          replyContent = counterpartResponses[Math.floor(Math.random() * counterpartResponses.length)];
+          respondentId = booking.farmer;
+          respondentName = booking.farmer_name || 'farmer';
         }
 
         const autoMsg = {
           id: currentDb.messages.length + 1,
           booking: bookingId,
-          sender: (currentUser.role === 'Farmer' ? booking.equipment_details.owner : booking.farmer),
-          sender_name: (currentUser.role === 'Farmer' ? booking.equipment_details.owner_name || 'owner' : booking.farmer_name || 'farmer'),
+          sender: respondentId,
+          sender_name: respondentName,
           content: replyContent,
           timestamp: new Date().toISOString()
         };
         currentDb.messages.push(autoMsg);
 
-        const recId = (currentUser.role === 'Farmer' ? booking.equipment_details.owner : booking.farmer);
-        currentDb.notifications.push({
-          id: currentDb.notifications.length + 1,
-          user: recId,
-          content: `New chat message regarding booking #${bookingId}.`,
-          is_read: false,
-          created_at: new Date().toISOString()
+        // Notify counterparties (Owner, Farmer, Operator)
+        const recipientIds = new Set();
+        if (booking.farmer && booking.farmer !== respondentId) recipientIds.add(booking.farmer);
+        if (booking.equipment_details?.owner && booking.equipment_details.owner !== respondentId) recipientIds.add(booking.equipment_details.owner);
+        if (booking.operator_assigned && booking.operator_assigned !== respondentId) recipientIds.add(booking.operator_assigned);
+
+        recipientIds.forEach(uid => {
+          currentDb.notifications.push({
+            id: currentDb.notifications.length + 1,
+            user: uid,
+            content: `New message from ${respondentName} regarding booking #${bookingId} (${booking.equipment_details?.title || 'Machinery'}).`,
+            is_read: false,
+            created_at: new Date().toISOString()
+          });
         });
 
         saveMockDB(currentDb);
