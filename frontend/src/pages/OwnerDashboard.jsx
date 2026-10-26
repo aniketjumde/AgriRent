@@ -536,7 +536,7 @@ export default function OwnerDashboard() {
               : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
           }`}
         >
-          💳 Escrow Settlements & Payouts ({paymentsList.length})
+          💳 Earnings & Bank Payouts ({paymentsList.length})
         </button>
       </div>
 

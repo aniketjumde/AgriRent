@@ -134,7 +134,7 @@ export default function SignupPage({ onNavigate }) {
         <form onSubmit={handleRegisterSubmit} className="space-y-4" noValidate>
           <div>
             <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
-              Username <span className="text-red-500">*</span>
+              Choose a username <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
@@ -161,7 +161,7 @@ export default function SignupPage({ onNavigate }) {
 
           <div>
             <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
-              Email Address <span className="text-red-500">*</span>
+              Email address <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
@@ -188,7 +188,7 @@ export default function SignupPage({ onNavigate }) {
 
           <div>
             <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
-              Phone Number (Optional)
+              Mobile number (for booking SMS updates)
             </label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
@@ -217,7 +217,7 @@ export default function SignupPage({ onNavigate }) {
               <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 Password <span className="text-red-500">*</span>
               </label>
-              <span className="text-[10px] text-slate-400">Min. 12 characters</span>
+              <span className="text-[10px] text-slate-400">At least 12 characters</span>
             </div>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
@@ -286,7 +286,7 @@ export default function SignupPage({ onNavigate }) {
 
           {/* Role select */}
           <div>
-            <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Registering As</label>
+            <label className="block text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Select what best describes you</label>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"

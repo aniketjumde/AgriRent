@@ -105,10 +105,10 @@ export default function SupportCenter() {
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-          Support Center 🤝
+          Help & Support 🤝
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-          Frequently asked questions, ticket management systems, and live customer service chat support.
+          Get instant help with bookings, machinery deliveries, payments, or file a support request.
         </p>
       </div>
 
@@ -121,7 +121,7 @@ export default function SupportCenter() {
           <div className="glass p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <h3 className="text-md font-bold text-slate-850 dark:text-slate-100 flex items-center gap-1.5">
               <HelpCircle className="w-5 h-5 text-emerald-600" />
-              Frequently Asked Questions (FAQ)
+              Common questions & answers
             </h3>
             
             <div className="space-y-2.5">
@@ -165,7 +165,7 @@ export default function SupportCenter() {
                   />
                 </div>
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="block font-bold text-slate-450 mb-1.5">Priority Level</label>
+                  <label className="block font-bold text-slate-450 mb-1.5">Urgency level</label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value)}
@@ -185,7 +185,7 @@ export default function SupportCenter() {
                   rows={4}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Detail the issue, include booking IDs if applicable..."
+                  placeholder="Describe what happened. Include your booking ID or machine name so we can resolve it faster..."
                   className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
                 />
               </div>
