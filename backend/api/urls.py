@@ -31,7 +31,7 @@ urlpatterns = [
     # Health check for production monitoring
     path('health/', health_check_view, name='health-check'),
 
-    # Supabase Storage Upload API
+    # Equipment Image Upload API
     path('storage/upload/', upload_equipment_image_view, name='storage-upload'),
 
     # Nearby Equipment & Smart Cart APIs

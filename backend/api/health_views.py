@@ -4,10 +4,11 @@ from django.conf import settings
 
 def health_check_view(request):
     """
-    Health check endpoint for production monitoring (Render / Railway / Fly / AWS).
+    Health check endpoint for local and production monitoring.
     Verifies database connectivity, migrations state, and service status.
     """
     db_ok = True
+    db_error = None
     db_engine = settings.DATABASES['default']['ENGINE']
     try:
         with connection.cursor() as cursor:

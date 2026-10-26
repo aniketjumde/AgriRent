@@ -68,8 +68,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'agrirent.wsgi.application'
 
-# Database configuration: Supabase PostgreSQL (via DATABASE_URL, SUPABASE_DB_URL, or discrete env vars), fallback to local SQLite
-DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('SUPABASE_DB_URL')
+# Database configuration: Local PostgreSQL or local SQLite
+DATABASE_URL = os.environ.get('DATABASE_URL')
 DB_NAME = os.environ.get('DB_NAME', '')
 DB_USER = os.environ.get('DB_USER', '')
 DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
@@ -81,7 +81,7 @@ if DATABASE_URL:
     query_params = urllib.parse.parse_qs(parsed_db.query)
     ssl_mode = os.environ.get(
         'DB_SSLMODE',
-        query_params.get('sslmode', ['require'])[0]
+        query_params.get('sslmode', ['prefer'])[0]
     )    
     DATABASES = {
         'default': {
@@ -196,14 +196,14 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# Email Configuration (Production SMTP or Console fallback in DEBUG)
+# Email Configuration (Console fallback in DEBUG or local SMTP)
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.sendgrid.net')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False').lower() in ('true', '1', 't')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'AgriRent Support <noreply@agrirent.com>')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'AgriRent Support <noreply@agrirent.local>')
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
 
 # CORS Configuration
@@ -225,16 +225,9 @@ else:
         'http://localhost:3000',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:3000',
-        'https://*.vercel.app'
     ]
 
 # Razorpay Configuration (Test Mode credentials configurable via environment)
 RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', 'rzp_test_AgriRentDemoKey123')
 RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', 'AgriRentDemoKeySecretXYZ456')
 RAZORPAY_WEBHOOK_SECRET = os.environ.get('RAZORPAY_WEBHOOK_SECRET', 'whsec_AgriRentTestWebhook789')
-
-# Supabase Configuration
-SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
-SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', '')
-SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
-SUPABASE_STORAGE_BUCKET = os.environ.get('SUPABASE_STORAGE_BUCKET', 'equipment-images')

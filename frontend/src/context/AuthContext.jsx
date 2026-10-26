@@ -1,9 +1,8 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { supabaseBackend } from '../lib/supabaseBackend';
 
 const AuthContext = createContext();
 
-// Dynamically resolve API URL with Vercel / environment variable support
+// Dynamically resolve API URL with environment variable support
 // When VITE_API_BASE_URL is provided, use it (stripped of trailing slash).
 // In development, default to relative '/api' proxy or localhost:8000.
 const BACKEND_BASE = (
@@ -2563,8 +2562,7 @@ export const AuthProvider = ({ children }) => {
 
       if (isAuthEndpoint && !isMockExplicit && !(localToken && localToken.startsWith('mock-'))) {
         if (isNetworkFailure) {
-          // If the WSGI host is offline, we forward to supabaseBackend in login/register/verify
-          throw new Error("AgriRent WSGI Server unreachable. Falling over to direct Supabase Database...");
+          throw new Error("AgriRent Backend Server unreachable. Please ensure the local backend server is running on http://127.0.0.1:8000.");
         }
         throw e;
       }
@@ -2614,22 +2612,6 @@ export const AuthProvider = ({ children }) => {
       setUser(data.user);
       return data;
     } catch (e) {
-      const isNetworkError = e.message?.includes('unreachable') || e.message?.toLowerCase().includes('failed to fetch');
-      if (isNetworkError) {
-        // Automatically query live Supabase PostgreSQL database directly!
-        console.info("[AgriRent] Remote WSGI backend unavailable; executing direct authentication via Supabase database...");
-        try {
-          const sbRes = await supabaseBackend.login(emailOrUsername, password);
-          setSafeStorageItem('accessToken', sbRes.token.access);
-          setSafeStorageItem('refreshToken', sbRes.token.refresh);
-          setToken(sbRes.token.access);
-          setUser(sbRes.user);
-          return sbRes;
-        } catch (sbErr) {
-          setError(sbErr.message);
-          throw sbErr;
-        }
-      }
       setError(e.message);
       throw e;
     }
@@ -2650,23 +2632,6 @@ export const AuthProvider = ({ children }) => {
       }
       return data;
     } catch (e) {
-      const isNetworkError = e.message?.includes('unreachable') || e.message?.toLowerCase().includes('failed to fetch');
-      if (isNetworkError) {
-        console.info("[AgriRent] Remote WSGI backend unavailable; registering user directly in Supabase PostgreSQL database...");
-        try {
-          const sbRes = await supabaseBackend.register(username, email, password, role, phone_number);
-          if (sbRes.token) {
-            setSafeStorageItem('accessToken', sbRes.token.access);
-            setSafeStorageItem('refreshToken', sbRes.token.refresh);
-            setToken(sbRes.token.access);
-            setUser(sbRes.user);
-          }
-          return sbRes;
-        } catch (sbErr) {
-          setError(sbErr.message);
-          throw sbErr;
-        }
-      }
       setError(e.message);
       throw e;
     }
@@ -2691,23 +2656,6 @@ export const AuthProvider = ({ children }) => {
       }
       return data;
     } catch (e) {
-      const isNetworkError = e.message?.includes('unreachable') || e.message?.toLowerCase().includes('failed to fetch');
-      if (isNetworkError) {
-        console.info("[AgriRent] Remote WSGI backend unavailable; verifying email directly in Supabase PostgreSQL database...");
-        try {
-          const sbRes = await supabaseBackend.verifyEmail(email, tokenOrCode);
-          if (sbRes.token) {
-            setSafeStorageItem('accessToken', sbRes.token.access);
-            setSafeStorageItem('refreshToken', sbRes.token.refresh);
-            setToken(sbRes.token.access);
-            setUser(sbRes.user);
-          }
-          return sbRes;
-        } catch (sbErr) {
-          setError(sbErr.message);
-          throw sbErr;
-        }
-      }
       setError(e.message);
       throw e;
     }
@@ -2725,16 +2673,6 @@ export const AuthProvider = ({ children }) => {
       });
       return data;
     } catch (e) {
-      const isNetworkError = e.message?.includes('unreachable') || e.message?.toLowerCase().includes('failed to fetch');
-      if (isNetworkError) {
-        console.info("[AgriRent] Remote WSGI backend unavailable; generating new code directly in Supabase PostgreSQL database...");
-        try {
-          return await supabaseBackend.resendCode(emailOrUsername);
-        } catch (sbErr) {
-          setError(sbErr.message);
-          throw sbErr;
-        }
-      }
       setError(e.message);
       throw e;
     }
@@ -2772,11 +2710,6 @@ export const AuthProvider = ({ children }) => {
         })
       });
     } catch (e) {
-      const isNetworkError = e.message?.includes('unreachable') || e.message?.toLowerCase().includes('failed to fetch');
-      if (isNetworkError) {
-        console.info("[AgriRent] Remote WSGI backend unavailable; creating password reset code directly in Supabase...");
-        return await supabaseBackend.forgotPassword(emailOrUsername);
-      }
       throw e;
     }
   };
@@ -2794,11 +2727,6 @@ export const AuthProvider = ({ children }) => {
         })
       });
     } catch (e) {
-      const isNetworkError = e.message?.includes('unreachable') || e.message?.toLowerCase().includes('failed to fetch');
-      if (isNetworkError) {
-        console.info("[AgriRent] Remote WSGI backend unavailable; resetting password directly in Supabase...");
-        return await supabaseBackend.resetPassword(emailOrUsername, tokenOrCode, new_password);
-      }
       throw e;
     }
   };
