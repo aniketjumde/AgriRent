@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tractor, Sparkles, Sprout, Plus, Edit2, Check, X, TrendingUp, RefreshCw, Landmark, Calendar, MessageCircle, Send, ShieldAlert } from 'lucide-react';
+import { Tractor, Sparkles, Sprout, Plus, Edit2, Check, X, TrendingUp, RefreshCw, Landmark, Calendar, MessageCircle, Send, ShieldAlert, Bell, CheckCircle2, User, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -51,8 +51,12 @@ export default function OwnerDashboard() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Notifications state
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+
   // Tab State & Interactive Map State
-  const [activeTab, setActiveTab] = useState('inventory'); // 'inventory', 'escrow'
+  const [activeTab, setActiveTab] = useState('inventory'); // 'inventory', 'escrow', 'notifications'
   const [paymentsList, setPaymentsList] = useState([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [expandedHealthId, setExpandedHealthId] = useState(null);
@@ -97,6 +101,14 @@ export default function OwnerDashboard() {
       // 3. Load Analytics
       const stats = await apiFetch('/api/dashboard/owner/');
       setAnalytics(stats);
+
+      // 4. Load Notifications
+      try {
+        const notifs = await apiFetch('/api/notifications/');
+        setNotifications(notifs || []);
+      } catch (err) {
+        console.warn("Could not load owner notifications:", err);
+      }
     } catch (e) {
       console.error("Failed to load owner data:", e);
     } finally {
@@ -121,6 +133,15 @@ export default function OwnerDashboard() {
       window.removeEventListener('agrirent_new_message', handleNewMessage);
     };
   }, [activeChatBooking]);
+
+  const handleMarkNotificationsRead = async () => {
+    try {
+      await apiFetch('/api/notifications/', { method: 'PATCH' });
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch (e) {
+      console.warn("Could not mark notifications read:", e);
+    }
+  };
 
   const handleOpenAdd = () => {
     setEditingListing(null);
@@ -306,7 +327,54 @@ export default function OwnerDashboard() {
             </span>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 relative">
+          {/* Notification Button */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowNotifDropdown(!showNotifDropdown);
+                if (!showNotifDropdown && notifications.some(n => !n.is_read)) {
+                  handleMarkNotificationsRead();
+                }
+              }}
+              className="p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-all text-slate-600 dark:text-slate-400 relative"
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4" />
+              {notifications.filter(n => !n.is_read).length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-600 text-white text-[9px] font-black rounded-full flex items-center justify-center animate-pulse">
+                  {notifications.filter(n => !n.is_read).length}
+                </span>
+              )}
+            </button>
+
+            {/* Notification Dropdown Menu */}
+            {showNotifDropdown && (
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-[700] p-4 animate-scale-up space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Bell className="w-4 h-4 text-emerald-600" />
+                    <span className="font-extrabold text-xs text-slate-800 dark:text-white">Owner Notifications</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-bold">{notifications.length} recent</span>
+                </div>
+
+                <div className="max-h-64 overflow-y-auto space-y-2 no-scrollbar pr-1">
+                  {notifications.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic text-center py-6">No notifications right now.</p>
+                  ) : (
+                    notifications.map((n, idx) => (
+                      <div key={idx} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-xs space-y-1">
+                        <p className="text-slate-800 dark:text-slate-200 font-medium leading-snug">{n.content}</p>
+                        <span className="text-[9px] text-slate-400 block">{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={handleOpenAdd}
             className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md text-xs hover:scale-105 transition-all"
@@ -317,6 +385,7 @@ export default function OwnerDashboard() {
           <button
             onClick={loadOwnerData}
             className="p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-all text-slate-600 dark:text-slate-400"
+            title="Refresh dashboard"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -935,43 +1004,93 @@ export default function OwnerDashboard() {
       </>
       )}
 
-      {/* 5. Booking Chat Panel */}
+      {/* 5. Proper Multi-Party Equipment Messaging Window */}
       {activeChatBooking && (
-        <div className="fixed bottom-6 right-20 z-[998] w-80 sm:w-96 h-[400px] rounded-2xl shadow-2xl glass flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-slide-up">
-          <div className="px-4 py-3 bg-slate-800 text-white flex items-center justify-between">
-            <div className="text-xs">
-              <span className="block text-[9px] text-slate-400">Farmer Negotiation</span>
-              <strong>{activeChatBooking.farmer_name}</strong>
+        <div className="fixed bottom-6 right-6 sm:right-20 z-[998] w-88 sm:w-[420px] h-[520px] rounded-3xl shadow-2xl bg-white dark:bg-slate-900 flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-slide-up">
+          {/* Header */}
+          <div className="px-5 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white flex items-center justify-between border-b border-slate-700/50">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 flex items-center justify-center font-bold">
+                <MessageCircle className="w-5 h-5" />
+              </div>
+              <div className="text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-white text-sm">{activeChatBooking.equipment_details?.title || 'Machinery'}</span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300">
+                    #{activeChatBooking.id}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  Farmer: <strong className="text-white">{activeChatBooking.farmer_name}</strong>
+                  {activeChatBooking.operator_assigned && (
+                    <span className="text-emerald-300 ml-1.5 font-semibold">• Operator assigned</span>
+                  )}
+                </p>
+              </div>
             </div>
-            <button onClick={() => setActiveChatBooking(null)} className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10">
-              <X className="w-4 h-4" />
+            <button 
+              onClick={() => setActiveChatBooking(null)} 
+              className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition-colors"
+              title="Close message window"
+            >
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="flex-1 p-4 overflow-y-auto space-y-2 bg-slate-50/50 dark:bg-slate-900/10 no-scrollbar">
-            {chatMessages.map(msg => (
-              <div key={msg.id} className={`flex ${msg.sender_name === user?.username ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] px-3 py-1.5 rounded-xl text-xs ${
-                  msg.sender_name === user?.username 
-                    ? 'bg-emerald-600 text-white rounded-br-none' 
-                    : 'bg-white dark:bg-slate-850 text-slate-800 dark:text-slate-100 border border-slate-100 rounded-bl-none'
-                }`}>
-                  <p>{msg.content}</p>
-                </div>
-              </div>
-            ))}
+          {/* Quick Context Strip */}
+          <div className="px-4 py-2 bg-slate-50 dark:bg-slate-850/60 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+            <span>Status: <strong className="text-slate-800 dark:text-slate-200">{activeChatBooking.status}</strong></span>
+            <span>Delivery: <strong className="text-slate-800 dark:text-slate-200">{activeChatBooking.delivery_option}</strong></span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold">₹{activeChatBooking.equipment_details?.rental_price_per_hour || 600}/hr</span>
           </div>
 
-          <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900 flex gap-2">
+          {/* Messages Log */}
+          <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/40 dark:bg-slate-950/40 no-scrollbar">
+            {chatMessages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2">
+                <MessageCircle className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+                <p className="text-xs text-slate-400">No messages exchanged yet. Send a message to coordinate pickup or delivery.</p>
+              </div>
+            ) : (
+              chatMessages.map(msg => {
+                const isMe = (msg.sender_name === user?.username || msg.sender === user?.id);
+                return (
+                  <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                    <span className="text-[9px] font-bold text-slate-400 mb-0.5 px-1">
+                      {isMe ? 'You (Owner)' : msg.sender_name}
+                    </span>
+                    <div className={`max-w-[85%] px-3.5 py-2 rounded-2xl text-xs leading-relaxed shadow-xs ${
+                      isMe 
+                        ? 'bg-emerald-600 text-white rounded-tr-xs' 
+                        : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/70 dark:border-slate-700/70 rounded-tl-xs'
+                    }`}>
+                      <p>{msg.content}</p>
+                    </div>
+                    <span className="text-[8px] text-slate-400 mt-0.5 px-1">
+                      {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Message Input Box */}
+          <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-2">
             <input
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type your message..."
-              className="flex-1 px-3 py-1.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none"
+              placeholder="Type message to farmer / operator..."
+              className="flex-1 px-4 py-2.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
-            <button type="submit" disabled={!newMessage.trim()} className="p-2 bg-emerald-600 text-white rounded-full">
-              <Send className="w-3.5 h-3.5" />
+            <button 
+              type="submit" 
+              disabled={!newMessage.trim()} 
+              className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl disabled:opacity-40 transition-colors shadow-sm"
+              title="Send message"
+            >
+              <Send className="w-4 h-4" />
             </button>
           </form>
         </div>
