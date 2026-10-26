@@ -645,7 +645,7 @@ export default function FarmerDashboard() {
     
     // Conflict detection warning
     const hasConflict = bookings.some(b => {
-      if (b.equipment !== bookingListing.id || b.status === 'Rejected') return false;
+      if (b.equipment !== bookingListing.id || b.status === 'Rejected' || b.status === 'Cancelled') return false;
       const bStart = b.start_date.split('T')[0];
       const bEnd = b.end_date.split('T')[0];
       return (startDate >= bStart && startDate <= bEnd) || (endDate >= bStart && endDate <= bEnd);
@@ -815,7 +815,7 @@ export default function FarmerDashboard() {
     try {
       await apiFetch(`/api/bookings/${bookingId}/status/`, {
         method: 'PATCH',
-        body: JSON.stringify({ status: 'Rejected' })
+        body: JSON.stringify({ status: 'Cancelled' })
       });
       loadDashboardData();
     } catch (e) {
@@ -897,7 +897,7 @@ export default function FarmerDashboard() {
   // Helper: generate array of dates for availability calendar preview (next 14 days)
   const getAvailabilityCalendar = (listingId) => {
     const calendarDays = [];
-    const listingBookings = bookings.filter(b => b.equipment === listingId && b.status !== 'Rejected');
+    const listingBookings = bookings.filter(b => b.equipment === listingId && b.status !== 'Rejected' && b.status !== 'Cancelled');
     
     for (let i = 0; i < 14; i++) {
       const date = new Date();
@@ -1858,7 +1858,7 @@ export default function FarmerDashboard() {
                       <span className="text-base font-black text-emerald-600">₹{b.total_cost}</span>
                       
                       <div className="flex gap-2">
-                        {b.payment_status !== 'Captured' && b.status !== 'Rejected' && (
+                        {b.payment_status !== 'Captured' && b.status !== 'Rejected' && b.status !== 'Cancelled' && (
                           <button
                             onClick={() => handlePayWithRazorpay(b)}
                             disabled={paymentLoadingId === b.id}
@@ -1876,7 +1876,7 @@ export default function FarmerDashboard() {
                             ✓ Paid
                           </span>
                         )}
-                        {b.status === 'Pending' && (
+                        {(b.status === 'Pending' || b.status === 'Approved') && (
                           <button
                             onClick={() => handleCancelBooking(b.id)}
                             className="px-2.5 py-1 border border-red-200 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-[10px] font-bold"
@@ -1906,11 +1906,11 @@ export default function FarmerDashboard() {
 
                       <div className="flex flex-col items-center flex-1 relative">
                         <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold z-10 ${
-                          b.status === 'Rejected' ? 'bg-red-500 text-white' :
+                          b.status === 'Rejected' || b.status === 'Cancelled' ? 'bg-red-500 text-white' :
                           ['Approved', 'In Progress', 'Completed'].includes(b.status) ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
                         }`}>2</div>
-                        <span className={b.status === 'Rejected' ? 'mt-1 text-red-500' : ['Approved', 'In Progress', 'Completed'].includes(b.status) ? 'mt-1 text-emerald-600' : 'mt-1'}>
-                          {b.status === 'Rejected' ? 'Rejected' : 'Approved'}
+                        <span className={b.status === 'Rejected' || b.status === 'Cancelled' ? 'mt-1 text-red-500' : ['Approved', 'In Progress', 'Completed'].includes(b.status) ? 'mt-1 text-emerald-600' : 'mt-1'}>
+                          {b.status === 'Cancelled' ? 'Cancelled' : b.status === 'Rejected' ? 'Rejected' : 'Approved'}
                         </span>
                         <div className="absolute top-2.5 left-1/2 w-full h-0.5 bg-slate-200 dark:bg-slate-800 -z-0"></div>
                       </div>

@@ -610,7 +610,7 @@ def update_booking_status_view(request, pk):
         return Response({"error": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
         
     new_status = request.data.get('status')
-    if new_status not in ['Approved', 'Rejected', 'In Progress', 'Completed']:
+    if new_status not in ['Approved', 'Rejected', 'Cancelled', 'In Progress', 'Completed']:
         return Response({"error": "Invalid status choice."}, status=status.HTTP_400_BAD_REQUEST)
         
     # Role checking
@@ -620,6 +620,12 @@ def update_booking_status_view(request, pk):
     
     if new_status in ['Approved', 'Rejected'] and not (is_owner or is_admin):
         return Response({"error": "Only the equipment owner or Admin can approve/reject bookings."}, status=status.HTTP_403_FORBIDDEN)
+
+    if new_status == 'Cancelled':
+        if not (is_farmer or is_admin or is_owner):
+            return Response({"error": "Unauthorized cancellation."}, status=status.HTTP_403_FORBIDDEN)
+        if booking.status not in ['Pending', 'Approved']:
+            return Response({"error": f"Cannot cancel a booking in '{booking.status}' status."}, status=status.HTTP_400_BAD_REQUEST)
         
     if new_status in ['In Progress', 'Completed'] and not (is_owner or is_farmer or is_admin):
         return Response({"error": "Unauthorized change."}, status=status.HTTP_403_FORBIDDEN)
@@ -629,7 +635,7 @@ def update_booking_status_view(request, pk):
     # Manage Escrow payout logic
     if new_status == 'Completed':
         booking.escrow_status = 'Released' # Payout released to Owner
-    elif new_status == 'Rejected':
+    elif new_status in ['Rejected', 'Cancelled']:
         booking.escrow_status = 'Refunded' # Refunded to Farmer
         
     booking.save()
@@ -642,8 +648,8 @@ def update_booking_status_view(request, pk):
         except Exception as e:
             print("Operator dispatch error:", e)
     
-    # If completed, set equipment availability back to true
-    if new_status == 'Completed':
+    # Update equipment availability
+    if new_status in ['Completed', 'Rejected', 'Cancelled']:
         booking.equipment.is_available = True
         booking.equipment.save()
     elif new_status == 'Approved':
