@@ -6,6 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import MapComponent from '../components/MapComponent';
 import SmartBookingCart from '../components/SmartBookingCart';
 import EquipmentDetailDrawer from '../components/EquipmentDetailDrawer';
+import BookingReviewModal from '../components/BookingReviewModal';
 import OperatorRouteMap from '../components/OperatorRouteMap';
 import VoiceBookingModal from '../components/VoiceBookingModal';
 
@@ -158,6 +159,11 @@ export default function FarmerDashboard() {
   const [taskType, setTaskType] = useState('Harvesting');
   const [aiRecResult, setAiRecResult] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  // Step 8: AI Booking Review Modal state
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedReviewMatch, setSelectedReviewMatch] = useState(null);
+  const [aiMatchResults, setAiMatchResults] = useState(null);
+  const [aiMatchLoading, setAiMatchLoading] = useState(false);
 
   // Voice Booking
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
@@ -829,6 +835,79 @@ export default function FarmerDashboard() {
   };
 
   // Run AI Recommendation
+  const handleRunAIMatching = async () => {
+    setAiMatchLoading(true);
+    try {
+      const res = await apiFetch('/api/ai/match/', {
+        method: 'POST',
+        body: JSON.stringify({
+          farming_operation: taskType === 'Tilling' ? 'Tilling' : (taskType === 'Harvesting' ? 'Harvesting' : (taskType === 'Sowing' ? 'Sowing' : 'Land Preparation')),
+          crop_type: cropType,
+          land_size: landSize,
+          farmer_lat: farmerLocation.latitude,
+          farmer_lng: farmerLocation.longitude,
+          duration_hours: 4.0,
+          requires_operator: true
+        })
+      });
+      setAiMatchResults(res);
+      if (res.recommendations && res.recommendations.length > 0) {
+        alert(`AI Matching Engine found ${res.recommendations.length} available machine-operator pairs for ${cropType}! Top match score: ${res.recommendations[0].match_metrics.overall_score}%`);
+      } else {
+        alert("No compatible machinery or operators found for this task in your radius.");
+      }
+    } catch (e) {
+      alert("AI matching error: " + e.message);
+    } finally {
+      setAiMatchLoading(false);
+    }
+  };
+
+  const handleOpenReviewForRecommendation = (rec) => {
+    setSelectedReviewMatch({
+      ...rec,
+      farming_operation: taskType || 'Land Preparation',
+      duration_hours: 4.0,
+      acreage: landSize || 2.0
+    });
+    setReviewModalOpen(true);
+  };
+
+  const handleConfirmDirectBooking = async (bookingPayload) => {
+    setValidatingCart(true);
+    try {
+      const res = await apiFetch('/api/bookings/', {
+        method: 'POST',
+        body: JSON.stringify({
+          equipment: bookingPayload.equipment_id,
+          start_date: bookingPayload.start_date,
+          end_date: bookingPayload.end_date,
+          rental_type: bookingPayload.rental_type || 'hourly',
+          duration: bookingPayload.duration || 4.0,
+          acreage: bookingPayload.acreage || 2.0,
+          farming_operation: bookingPayload.farming_operation || 'Fieldwork',
+          delivery_option: bookingPayload.delivery_option || 'Pickup',
+          requires_operator: bookingPayload.requires_operator,
+          insurance_opt_in: bookingPayload.insurance_opt_in,
+          farmer_lat: farmerLocation.latitude,
+          farmer_lng: farmerLocation.longitude,
+          agreed_price: bookingPayload.item_total,
+          notes: bookingPayload.notes
+        })
+      });
+
+      alert(`Booking request #${res.id} successfully created and locked! Status: Pending Owner Approval.`);
+      setReviewModalOpen(false);
+      setActiveSubTab('my-bookings');
+      navigate('/dashboard/my-bookings');
+      loadDashboardData();
+    } catch (e) {
+      alert("Booking creation error: " + e.message);
+    } finally {
+      setValidatingCart(false);
+    }
+  };
+
   const handleGetRecommendation = async () => {
     setAiLoading(true);
     setAiRecResult(null);
@@ -1181,14 +1260,54 @@ export default function FarmerDashboard() {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleGetRecommendation}
-                  disabled={aiLoading}
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-sm transition-all text-xs flex items-center justify-center gap-2 disabled:opacity-50 animate-pulse-subtle"
-                >
-                  {aiLoading && <RefreshCw className="w-4 h-4 animate-spin" />}
-                  {t('getRecommendation')}
-                </button>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <button
+                    onClick={handleGetRecommendation}
+                    disabled={aiLoading}
+                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    {aiLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                    <span>KNN Advisor</span>
+                  </button>
+
+                  <button
+                    onClick={handleRunAIMatching}
+                    disabled={aiMatchLoading}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-sm transition-all text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    {aiMatchLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-amber-300" />}
+                    <span>AI Match Engine</span>
+                  </button>
+                </div>
+
+                                {aiMatchResults && aiMatchResults.recommendations && (
+                  <div className="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-white dark:bg-slate-900 space-y-2.5 text-xs animate-fade-in">
+                    <div className="flex justify-between items-center">
+                      <span className="font-extrabold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        AI Ranked Pairs ({aiMatchResults.recommendations.length})
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {aiMatchResults.recommendations.slice(0, 3).map((rec, rIdx) => (
+                        <div key={rIdx} className="p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 flex items-center justify-between gap-2">
+                          <div>
+                            <div className="font-bold text-slate-800 dark:text-white">{rec.equipment.title}</div>
+                            <div className="text-[10px] text-slate-500">
+                              Match: <strong className="text-emerald-600">{rec.match_metrics.overall_score}%</strong> | {rec.distance_km} km
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleOpenReviewForRecommendation(rec)}
+                            className="px-2.5 py-1.5 bg-emerald-600 text-white font-bold rounded-lg text-[10px] hover:bg-emerald-700 transition-all"
+                          >
+                            Review & Book
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {aiRecResult && (
                   <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/50 dark:bg-slate-850/40 dark:border-slate-800 text-xs animate-fade-in text-slate-800 dark:text-slate-200">

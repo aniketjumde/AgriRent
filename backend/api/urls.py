@@ -1,6 +1,7 @@
 from .health_views import health_check_view
 from .upload_views import upload_equipment_image_view
 from .nearby_views import nearby_equipment_view, validate_cart_booking_view, calculate_price_quote_view, check_equipment_availability_view
+from .matching_views import ai_match_equipment_and_operator_view
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
@@ -94,6 +95,7 @@ urlpatterns = [
     path('support/tickets/<int:pk>/', update_ticket_status_view, name='support-ticket-update'),
 
     # AI Module routes
+    path('ai/match/', ai_match_equipment_and_operator_view, name='ai-equipment-operator-match'),
     path('ai/recommend/', ai_recommend_view, name='ai-recommend'),
     path('ai/predict-price/', ai_predict_price_view, name='ai-predict-price'),
     path('ai/voice-booking/', ai_voice_booking_view, name='ai-voice-booking'),
