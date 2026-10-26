@@ -1774,20 +1774,58 @@ const mockApiRouter = async (endpoint, options = {}) => {
     return { reply };
   }
 
-  // 20. Weather Advisory Forecast
-  if (cleanEndpoint === '/api/weather/' && method === 'GET') {
+  // 20. Weather Advisory Forecast (Dynamic Calendar & Coordinates)
+  if (cleanEndpoint.startsWith('/api/weather') && method === 'GET') {
+    const urlObj = new URL(cleanEndpoint, 'http://localhost');
+    const qLat = parseFloat(urlObj.searchParams.get('lat') || urlObj.searchParams.get('latitude') || '18.5204');
+    const qLng = parseFloat(urlObj.searchParams.get('lng') || urlObj.searchParams.get('longitude') || '73.8567');
+    let qLoc = urlObj.searchParams.get('location') || urlObj.searchParams.get('address');
+
+    if (!qLoc) {
+      if (Math.abs(qLat - 18.5204) < 1.0) qLoc = "Pune, Maharashtra";
+      else if (Math.abs(qLat - 11.0168) < 1.0) qLoc = "Coimbatore, Tamil Nadu";
+      else qLoc = `Agri Zone (${qLat.toFixed(2)}°N, ${qLng.toFixed(2)}°E)`;
+    }
+
+    const today = new Date();
+    const conditions = [
+      { cond: "Sunny", rain: 10, temp: 31 },
+      { cond: "Partly Cloudy", rain: 20, temp: 32 },
+      { cond: "Scattered Showers", rain: 60, temp: 29 },
+      { cond: "Clear Skies", rain: 5, temp: 33 },
+      { cond: "Overcast", rain: 40, temp: 30 }
+    ];
+
+    const forecast = [];
+    const recommended_dates = [];
+    let highRainDay = null;
+
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const dayLabel = i === 0 ? "Today" : (i === 1 ? "Tomorrow" : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+      const c = conditions[i % conditions.length];
+      forecast.push({
+        day: dayLabel,
+        date: d.toISOString().split('T')[0],
+        temp: c.temp,
+        condition: c.cond,
+        rain_chance: c.rain
+      });
+      if (c.rain < 35) recommended_dates.push(dayLabel);
+      if (c.rain >= 60 && !highRainDay) highRainDay = dayLabel;
+    }
+
     return {
-      location: "Coimbatore, Tamil Nadu",
-      forecast: [
-        { day: "Today", temp: 31, condition: "Sunny", rain_chance: 10 },
-        { day: "Tomorrow", temp: 32, condition: "Partly Cloudy", rain_chance: 20 },
-        { day: "June 21", temp: 29, condition: "Scattered Showers", rain_chance: 60 },
-        { day: "June 22", temp: 28, condition: "Heavy Rain", rain_chance: 90 },
-        { day: "June 23", temp: 30, condition: "Overcast", rain_chance: 40 }
-      ],
-      rainfall_warning: "Heavy Rain Alert on June 22: High soil moisture, postpone seeder/sowing bookings to June 23.",
-      recommended_booking_dates: ["June 20", "June 23", "June 24"],
-      crop_cycle_recommendation: "Paddy fields are currently at the harvesting stage; combine harvesters are recommended for booking immediately."
+      location: qLoc,
+      latitude: qLat,
+      longitude: qLng,
+      forecast: forecast,
+      rainfall_warning: highRainDay 
+        ? `Precipitation Alert on ${highRainDay}: Saturated soil expected; reschedule chemical sprays or seeder operations.`
+        : "Optimal Agronomic Window: Low rainfall risk across 5-day cycle. Suitable for rotavator and seeders.",
+      recommended_booking_dates: recommended_dates.length > 0 ? recommended_dates : [forecast[0].day],
+      crop_cycle_recommendation: `Dynamic advisory for ${qLoc}: Seasonal agronomic conditions favor machinery deployment for soil prep & harvest operations.`
     };
   }
 

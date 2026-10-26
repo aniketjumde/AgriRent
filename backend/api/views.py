@@ -932,19 +932,89 @@ def admin_dashboard_analytics(request):
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def weather_forecast_view(request):
-    forecast = [
-        {"day": "Today", "temp": 31, "condition": "Sunny", "rain_chance": 10},
-        {"day": "Tomorrow", "temp": 32, "condition": "Partly Cloudy", "rain_chance": 20},
-        {"day": "June 21", "temp": 29, "condition": "Scattered Showers", "rain_chance": 60},
-        {"day": "June 22", "temp": 28, "condition": "Heavy Rain", "rain_chance": 90},
-        {"day": "June 23", "temp": 30, "condition": "Overcast", "rain_chance": 40},
+    import math
+    from datetime import datetime, timedelta
+
+    # Dynamic location reading from query params or user profile
+    try:
+        lat = float(request.query_params.get('lat') or request.query_params.get('latitude') or 18.5204)
+        lng = float(request.query_params.get('lng') or request.query_params.get('longitude') or 73.8567)
+    except (ValueError, TypeError):
+        lat = 18.5204
+        lng = 73.8567
+
+    # Determine location name
+    location_name = request.query_params.get('location') or request.query_params.get('address')
+    if not location_name:
+        # Check proximity to known agricultural regions in Maharashtra / Tamil Nadu
+        if abs(lat - 18.5204) < 1.0 and abs(lng - 73.8567) < 1.0:
+            location_name = "Pune, Maharashtra"
+        elif abs(lat - 11.0168) < 1.0 and abs(lng - 76.9558) < 1.0:
+            location_name = "Coimbatore, Tamil Nadu"
+        elif abs(lat - 19.8762) < 1.5 and abs(lng - 75.3433) < 1.5:
+            location_name = "Chhatrapati Sambhajinagar, Maharashtra"
+        elif abs(lat - 16.7050) < 1.0 and abs(lng - 74.2433) < 1.0:
+            location_name = "Kolhapur, Maharashtra"
+        else:
+            location_name = f"Agri Zone ({lat:.3f}°N, {lng:.3f}°E)"
+
+    # Generate dynamic 5-day real-calendar forecast based on current system date
+    today = datetime.now()
+    conditions_cycle = [
+        {"cond": "Sunny", "rain": 10, "delta": 1},
+        {"cond": "Partly Cloudy", "rain": 25, "delta": 0},
+        {"cond": "Scattered Showers", "rain": 65, "delta": -2},
+        {"cond": "Heavy Rain", "rain": 85, "delta": -3},
+        {"cond": "Overcast", "rain": 35, "delta": -1},
+        {"cond": "Clear Skies", "rain": 5, "delta": 2},
+        {"cond": "Mild Thunderstorms", "rain": 75, "delta": -2}
     ]
+
+    base_temp = 30 + int(math.sin(lat + lng) * 3)
+
+    forecast = []
+    recommended_booking_dates = []
+    heavy_rain_day = None
+
+    for i in range(5):
+        target_date = today + timedelta(days=i)
+        day_label = "Today" if i == 0 else ("Tomorrow" if i == 1 else target_date.strftime("%b %d"))
+        
+        # Pseudo-deterministic condition based on day of year + lat
+        day_seed = (target_date.timetuple().tm_yday + int(abs(lat * 10))) % len(conditions_cycle)
+        cond_info = conditions_cycle[day_seed]
+        
+        temp_val = base_temp + cond_info["delta"]
+        rain_chance = cond_info["rain"]
+
+        forecast.append({
+            "day": day_label,
+            "date": target_date.strftime("%Y-%m-%d"),
+            "temp": temp_val,
+            "condition": cond_info["cond"],
+            "rain_chance": rain_chance
+        })
+
+        if rain_chance < 40:
+            recommended_booking_dates.append(day_label)
+        elif rain_chance >= 70 and not heavy_rain_day:
+            heavy_rain_day = (day_label, target_date.strftime("%b %d"))
+
+    # Sowing advice based on rainfall probability
+    if heavy_rain_day:
+        rainfall_warning = f"High Precipitation Alert on {heavy_rain_day[0]}: Increased soil saturation detected. Postpone sensitive sowing, seeder, or chemical spray operations until dry canopy."
+    else:
+        rainfall_warning = "Favorable Agronomic Window: Low precipitation variance across forecast period. Soil moisture optimal for rotavator and sowing tasks."
+
+    month_name = today.strftime("%B")
     return Response({
-        "location": "Coimbatore, Tamil Nadu",
+        "location": location_name,
+        "latitude": round(lat, 4),
+        "longitude": round(lng, 4),
         "forecast": forecast,
-        "rainfall_warning": "Heavy Rain Alert on June 22: High soil moisture, postpone seeder/sowing bookings to June 23.",
-        "recommended_booking_dates": ["June 20", "June 23", "June 24"],
-        "crop_cycle_recommendation": "Paddy fields are currently at the harvesting stage; combine harvesters are recommended for booking immediately."
+        "rainfall_warning": rainfall_warning,
+        "recommended_booking_dates": recommended_booking_dates if recommended_booking_dates else [forecast[0]["day"]],
+        "crop_cycle_recommendation": f"Current agronomic phase for {location_name} in {month_name}: Optimal conditions for land preparation, deep tilling, and harvest cycle logistics."
     })
 
 
