@@ -1293,7 +1293,7 @@ export default function FarmerDashboard() {
                 <div>
                   <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                     <Bot className="w-5 h-5 text-emerald-600" />
-                    Equipment Match Advisor
+                    AI Suitability Advisor
                   </h3>
                   <p className="text-[10px] text-slate-450 mt-1">Request custom KNN suggestion based on crop and tasks. Output sets catalog filters!</p>
 
@@ -1423,7 +1423,7 @@ export default function FarmerDashboard() {
               {weatherData && (
                 <div className="glass p-5 rounded-2xl border border-slate-200 dark:border-slate-850 shadow-sm space-y-4">
                   <h4 className="text-xs font-black uppercase text-emerald-650 dark:text-emerald-450 tracking-wider flex items-center gap-1">
-                    🌤️ 5-Day Weather & Sowing Forecast
+                    🌤️ Weather-Aware Sowing Advisor
                   </h4>
                   <div className="flex justify-between items-center text-xs">
                     <span>Location: <strong>{weatherData.location}</strong></span>
@@ -3027,7 +3027,7 @@ export default function FarmerDashboard() {
                   <p className="text-[11px] text-slate-455 mt-1">
                     {recFilterTab === 'Saved' 
                       ? 'Bookmark recommendations from the list to save them here for quick access.' 
-                      : 'Use the Equipment Match Advisor widget on the main directory page to generate suggestions.'}
+                      : 'Use the AI Suitability Advisor widget on the main directory page to generate suggestions.'}
                   </p>
                 </div>
               </div>
