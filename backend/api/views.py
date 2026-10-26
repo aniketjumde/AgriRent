@@ -605,74 +605,39 @@ class BookingListCreateView(APIView):
 @permission_classes([permissions.IsAuthenticated])
 def update_booking_status_view(request, pk):
     try:
-        booking = Booking.objects.get(pk=pk)
+        booking = Booking.objects.select_related('equipment', 'equipment__owner', 'farmer', 'operator_assigned').get(pk=pk)
     except Booking.DoesNotExist:
         return Response({"error": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
-        
+
     new_status = request.data.get('status')
-    if new_status not in ['Approved', 'Rejected', 'Cancelled', 'In Progress', 'Completed']:
-        return Response({"error": "Invalid status choice."}, status=status.HTTP_400_BAD_REQUEST)
-        
-    # Role checking
-    is_owner = booking.equipment.owner == request.user
-    is_farmer = booking.farmer == request.user
-    is_admin = request.user.role == 'Admin'
-    
-    if new_status in ['Approved', 'Rejected'] and not (is_owner or is_admin):
-        return Response({"error": "Only the equipment owner or Admin can approve/reject bookings."}, status=status.HTTP_403_FORBIDDEN)
-
-    if new_status == 'Cancelled':
-        if not (is_farmer or is_admin or is_owner):
-            return Response({"error": "Unauthorized cancellation."}, status=status.HTTP_403_FORBIDDEN)
-        if booking.status not in ['Pending', 'Approved']:
-            return Response({"error": f"Cannot cancel a booking in '{booking.status}' status."}, status=status.HTTP_400_BAD_REQUEST)
-        
-    if new_status in ['In Progress', 'Completed'] and not (is_owner or is_farmer or is_admin):
-        return Response({"error": "Unauthorized change."}, status=status.HTTP_403_FORBIDDEN)
-        
     reason = request.data.get('reason', '')
-    now = timezone.now()
 
-    # Append audit trail to notes
-    status_audit_entry = f" [Status Transition] {booking.status} -> {new_status} at {now.isoformat()} by {request.user.username} ({request.user.role})"
-    if reason:
-        status_audit_entry += f" | Reason: {reason}"
-    booking.notes = (booking.notes or '') + status_audit_entry
+    from .workflow_service import transition_booking_status
+    from rest_framework.exceptions import ValidationError, PermissionDenied
 
-    booking.status = new_status
-    
-    # Manage Escrow payout logic
-    if new_status == 'Completed':
-        booking.escrow_status = 'Released' # Payout released to Owner
-    elif new_status in ['Rejected', 'Cancelled']:
-        booking.escrow_status = 'Refunded' # Refunded to Farmer
-        
-    booking.save()
+    try:
+        updated_booking = transition_booking_status(
+            booking=booking,
+            new_status=new_status,
+            actor_user=request.user,
+            reason=reason
+        )
 
-    # If approved and operator requested, auto-dispatch to matching operators
-    if new_status == 'Approved' and booking.requires_operator and not booking.operator_assigned:
-        try:
-            from .operator_views import dispatch_booking_to_matching_operators
-            dispatch_booking_to_matching_operators(booking)
-        except Exception as e:
-            print("Operator dispatch error:", e)
-    
-    # Update equipment availability
-    if new_status in ['Completed', 'Rejected', 'Cancelled']:
-        booking.equipment.is_available = True
-        booking.equipment.save()
-    elif new_status == 'Approved':
-        booking.equipment.is_available = False
-        booking.equipment.save()
-        
-    # Notify other party
-    notified_user = booking.farmer if is_owner else booking.equipment.owner
-    Notification.objects.create(
-        user=notified_user,
-        content=f"Booking #{booking.id} status updated to: {new_status}. Escrow: {booking.escrow_status}."
-    )
-    
-    return Response(BookingSerializer(booking).data)
+        # If approved and operator requested, auto-dispatch to matching operators
+        if new_status == 'Approved' and updated_booking.requires_operator and not updated_booking.operator_assigned:
+            try:
+                from .operator_views import dispatch_booking_to_matching_operators
+                dispatch_booking_to_matching_operators(updated_booking)
+            except Exception as e:
+                print("Operator dispatch error:", e)
+
+        return Response(BookingSerializer(updated_booking).data, status=status.HTTP_200_OK)
+    except ValidationError as e:
+        return Response({"error": str(e.detail[0] if isinstance(e.detail, list) else e.detail)}, status=status.HTTP_400_BAD_REQUEST)
+    except PermissionDenied as e:
+        return Response({"error": str(e.detail)}, status=status.HTTP_403_FORBIDDEN)
+    except Exception as e:
+        return Response({"error": f"Status update failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # --- CHAT MESSAGES VIEWS ---

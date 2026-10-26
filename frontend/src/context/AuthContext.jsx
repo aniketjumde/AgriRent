@@ -1569,6 +1569,114 @@ const mockApiRouter = async (endpoint, options = {}) => {
     };
   }
 
+  // 15.5 AI Equipment & Operator Matching
+  if (cleanEndpoint === '/api/ai/match/' && method === 'POST') {
+    const farming_op = body.farming_operation || 'Land Preparation';
+    const req_operator = body.requires_operator !== false;
+    const dur_hours = parseFloat(body.duration_hours || body.duration || 4.0);
+    const farmer_lat = parseFloat(body.farmer_lat || body.latitude || 18.5204);
+    const farmer_lng = parseFloat(body.farmer_lng || body.longitude || 73.8567);
+
+    const availableEquipment = db.equipment.filter(e => e.is_available !== false);
+    const matchedOps = (db.operator_profiles || []).filter(o => o.verification_status === 'Verified' && o.is_available !== false);
+
+    const recommendations = availableEquipment.map((equip, idx) => {
+      const dist = Math.round((Math.sqrt(Math.pow(farmer_lat - (equip.location_latitude || 18.52), 2) + Math.pow(farmer_lng - (equip.location_longitude || 73.85), 2)) * 111) * 10) / 10;
+      const baseCost = parseFloat(equip.rental_price_per_hour || 600) * dur_hours;
+      const op = matchedOps[idx % matchedOps.length] || null;
+      const opRate = op ? parseFloat(op.hourly_compensation_rate || 250) : 250;
+      const opCost = req_operator ? opRate * dur_hours : 0;
+      const transportCost = Math.round(Math.max(200, dist * 20));
+      const totalCost = baseCost + opCost + transportCost;
+
+      const taskScore = 28.0;
+      const conditionScore = 14.0;
+      const proxScore = Math.max(5, Math.round(20 - dist * 0.5));
+      const opScore = req_operator && op ? 18.0 : 10.0;
+      const budgetScore = 14.0;
+      const overall = Math.round((taskScore + conditionScore + proxScore + opScore + budgetScore) * 10) / 10;
+
+      return {
+        equipment: {
+          id: equip.id,
+          title: equip.title,
+          category: equip.category,
+          description: equip.description,
+          rental_price_per_hour: equip.rental_price_per_hour,
+          location_latitude: equip.location_latitude,
+          location_longitude: equip.location_longitude,
+          address: equip.address,
+          image_url: equip.image_url,
+          is_verified: equip.is_verified,
+          fuel_efficiency: equip.fuel_efficiency || '4.5 L/hr',
+          sensor_health: {
+            temperature: 78.5,
+            vibration: 'Normal',
+            oil_level: 'Optimal'
+          },
+          owner: {
+            id: equip.owner,
+            username: equip.owner_name || 'Owner',
+            phone: equip.owner_phone || '+919876543212',
+            reliability_score: 4.8
+          }
+        },
+        operator: req_operator && op ? {
+          operator_id: op.id,
+          user_id: op.user_id,
+          full_name: op.full_name || 'Verified Operator',
+          username: op.username || 'operator',
+          phone: op.phone || '+919876543213',
+          experience_years: op.experience_years || 5,
+          supported_machinery: op.supported_machinery || ['Tractor', 'Harvester'],
+          reliability_score: 4.8,
+          hourly_rate: opRate,
+          distance_to_pickup_km: Math.round(dist * 0.4 * 10) / 10,
+          suitability_score: opScore,
+          status: 'Eligible and Available'
+        } : null,
+        match_metrics: {
+          overall_score: overall,
+          task_score: taskScore,
+          condition_score: conditionScore,
+          proximity_score: proxScore,
+          operator_score: opScore,
+          budget_score: budgetScore,
+          suitability_label: overall >= 80 ? 'High Match' : 'Good Match'
+        },
+        estimated_costs: {
+          base_rental: baseCost,
+          operator_charges: opCost,
+          transport_charges: transportCost,
+          total_estimated_cost: totalCost,
+          currency: 'INR'
+        },
+        distance_km: dist,
+        start_date: body.start_date || new Date().toISOString(),
+        end_date: body.end_date || new Date(Date.now() + 4 * 3600000).toISOString(),
+        recommendation_reasons: [
+          `Optimal match for ${farming_op} fieldwork`,
+          `Nearby machine (${dist} km away; low transport cost)`,
+          `Verified machine with optimal IoT sensor health`,
+          ...(req_operator && op ? [`Qualified operator ${op.full_name || op.username} available`] : [])
+        ]
+      };
+    });
+
+    recommendations.sort((a, b) => b.match_metrics.overall_score - a.match_metrics.overall_score);
+
+    return {
+      total_evaluated: availableEquipment.length,
+      eligible_count: recommendations.length,
+      farming_operation: farming_op,
+      crop_type: body.crop_type,
+      land_size_acres: body.land_size || 2.0,
+      duration_hours: dur_hours,
+      requires_operator: req_operator,
+      recommendations
+    };
+  }
+
   // 16. AI Suitability recommendation local calculation
   if (cleanEndpoint === '/api/ai/recommend/' && method === 'POST') {
     const baseRates = {

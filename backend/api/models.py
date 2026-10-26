@@ -111,8 +111,13 @@ class Booking(models.Model):
         ('Pending', 'Pending'),
         ('Approved', 'Approved'),
         ('Rejected', 'Rejected'),
+        ('Awaiting Dispatch', 'Awaiting Dispatch'),
+        ('In Transit', 'In Transit'),
+        ('Arrived', 'Arrived'),
         ('In Progress', 'In Progress'),
         ('Completed', 'Completed'),
+        ('Closed', 'Closed'),
+        ('Cancelled', 'Cancelled'),
     )
     equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE, related_name='bookings')
     farmer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookings_made')
