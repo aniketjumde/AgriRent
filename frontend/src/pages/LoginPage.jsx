@@ -58,7 +58,7 @@ export default function LoginPage({ onNavigate }) {
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           <div>
             <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-              Username or email
+              Username or Email Address
             </label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
@@ -69,7 +69,7 @@ export default function LoginPage({ onNavigate }) {
                 required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="e.g. farmer_suresh or your email"
+                placeholder="Enter username or email address"
                 className="w-full pl-10 pr-4 py-3 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
               />
             </div>
@@ -88,7 +88,7 @@ export default function LoginPage({ onNavigate }) {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your account password"
+                placeholder="Enter your password"
                 className="w-full pl-10 pr-10 py-3 text-sm rounded-xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
               />
               <button
@@ -125,10 +125,10 @@ export default function LoginPage({ onNavigate }) {
           <div className="pt-4 border-t border-slate-200/60 dark:border-slate-800/60">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                Try instant demo login
+                Quick Demo Accounts
               </span>
               <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                Instant access
+                Pune Cluster
               </span>
             </div>
             <div className="grid grid-cols-3 gap-1.5">
@@ -137,21 +137,21 @@ export default function LoginPage({ onNavigate }) {
                 onClick={() => { setIdentifier('farmer_suresh'); setPassword('Demo@AgriRent2026'); }}
                 className="px-2 py-1.5 text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-lg text-center border border-emerald-200 dark:border-emerald-800/50 transition-colors"
               >
-                🌾 Farmer demo
+                🌾 Farmer (Suresh)
               </button>
               <button
                 type="button"
                 onClick={() => { setIdentifier('operator_rajesh'); setPassword('Demo@AgriRent2026'); }}
                 className="px-2 py-1.5 text-[11px] font-semibold bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg text-center border border-blue-200 dark:border-blue-800/50 transition-colors"
               >
-                🚜 Operator demo
+                🚜 Operator (Rajesh)
               </button>
               <button
                 type="button"
                 onClick={() => { setIdentifier('owner_balasaheb'); setPassword('Demo@AgriRent2026'); }}
                 className="px-2 py-1.5 text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-lg text-center border border-amber-200 dark:border-amber-800/50 transition-colors"
               >
-                🏢 Machine owner demo
+                🏢 Owner (Balasaheb)
               </button>
             </div>
 
