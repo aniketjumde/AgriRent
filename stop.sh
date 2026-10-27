@@ -26,7 +26,7 @@ stop_pid_file() {
   fi
 }
 
-for service in backend frontend zrok; do
+for service in backend frontend; do
   stop_pid_file "$service"
 done
 

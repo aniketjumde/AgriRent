@@ -14,7 +14,7 @@ Traceback (most recent call last):
     connection = self.Database.connect(**conn_params)
   File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/psycopg2/__init__.py", line 122, in connect
     conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
-psycopg2.OperationalError: connection to server at "aws-0-ap-south-1.pooler.supabase.com" (3.111.105.85), port 6543 failed: FATAL:  (ENOTFOUND) tenant/user postgres.yourprojectref not found
+psycopg2.OperationalError: connection to server at "aws-0-ap-south-1.pooler.supabase.com" (65.0.195.55), port 6543 failed: FATAL:  (ENOTFOUND) tenant/user postgres.yourprojectref not found
 
 
 The above exception was the direct cause of the following exception:
@@ -78,5 +78,5 @@ Traceback (most recent call last):
     connection = self.Database.connect(**conn_params)
   File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/psycopg2/__init__.py", line 122, in connect
     conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
-django.db.utils.OperationalError: connection to server at "aws-0-ap-south-1.pooler.supabase.com" (3.111.105.85), port 6543 failed: FATAL:  (ENOTFOUND) tenant/user postgres.yourprojectref not found
+django.db.utils.OperationalError: connection to server at "aws-0-ap-south-1.pooler.supabase.com" (65.0.195.55), port 6543 failed: FATAL:  (ENOTFOUND) tenant/user postgres.yourprojectref not found
 
