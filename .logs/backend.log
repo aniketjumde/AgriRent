@@ -1103,3 +1103,60 @@
 [27/Oct/2026 05:03:33] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
 [27/Oct/2026 05:03:45] "GET /api/operator/dashboard/ HTTP/1.1" 200 1380
 [27/Oct/2026 05:03:45] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
+[27/Oct/2026 05:03:57] "GET /api/operator/dashboard/ HTTP/1.1" 200 1380
+[27/Oct/2026 05:03:57] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
+[27/Oct/2026 05:04:09] "GET /api/operator/dashboard/ HTTP/1.1" 200 1380
+[27/Oct/2026 05:04:09] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
+[27/Oct/2026 05:04:21] "GET /api/operator/dashboard/ HTTP/1.1" 200 1380
+[27/Oct/2026 05:04:21] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
+[27/Oct/2026 05:04:24] "OPTIONS /api/pricing/quote/ HTTP/1.1" 200 0
+[27/Oct/2026 05:04:24] "OPTIONS /api/pricing/quote/ HTTP/1.1" 200 0
+[27/Oct/2026 05:04:24] "POST /api/pricing/quote/ HTTP/1.1" 200 1848
+[27/Oct/2026 05:04:24] "POST /api/pricing/quote/ HTTP/1.1" 200 1848
+[27/Oct/2026 05:04:31] "POST /api/pricing/quote/ HTTP/1.1" 200 1851
+[27/Oct/2026 05:04:33] "GET /api/operator/dashboard/ HTTP/1.1" 200 1380
+[27/Oct/2026 05:04:33] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
+[27/Oct/2026 05:04:34] "OPTIONS /api/cart/validate/ HTTP/1.1" 200 0
+[27/Oct/2026 05:04:34] "POST /api/cart/validate/ HTTP/1.1" 200 1593
+[27/Oct/2026 05:04:34] "POST /api/bookings/ HTTP/1.1" 201 2301
+[27/Oct/2026 05:04:36] "GET /api/payments/history/ HTTP/1.1" 200 2
+[27/Oct/2026 05:04:36] "GET /api/dashboard/farmer/ HTTP/1.1" 200 223
+[27/Oct/2026 05:04:36] "GET /api/notifications/ HTTP/1.1" 200 2
+[27/Oct/2026 05:04:36] "GET /api/equipment/ HTTP/1.1" 200 67295
+[27/Oct/2026 05:04:36] "GET /api/bookings/ HTTP/1.1" 200 2303
+[27/Oct/2026 05:04:36] "GET /api/weather/?lat=18.5912&lng=73.7389&location=Suresh+Patil+Farm%2C+Maan%2C+Hinjawadi%2C+Pune+%2814.5+Acres%2C+Sugarcane%2FPaddy%29 HTTP/1.1" 200 1046
+[27/Oct/2026 05:04:36] "GET /api/govt-schemes/ HTTP/1.1" 200 820
+[27/Oct/2026 05:04:37] "OPTIONS /api/payments/razorpay/order/ HTTP/1.1" 200 0
+[27/Oct/2026 05:04:38] "POST /api/payments/razorpay/order/ HTTP/1.1" 200 471
+[27/Oct/2026 05:04:45] "GET /api/operator/dashboard/ HTTP/1.1" 200 1380
+[27/Oct/2026 05:04:45] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
+[27/Oct/2026 05:04:57] "GET /api/operator/dashboard/ HTTP/1.1" 200 1380
+[27/Oct/2026 05:04:57] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
+[27/Oct/2026 05:05:09] "GET /api/operator/dashboard/ HTTP/1.1" 200 1380
+[27/Oct/2026 05:05:09] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
+[27/Oct/2026 05:05:22] "GET /api/operator/dashboard/ HTTP/1.1" 200 1380
+[27/Oct/2026 05:05:22] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
+[27/Oct/2026 05:05:34] "GET /api/operator/dashboard/ HTTP/1.1" 200 1380
+[27/Oct/2026 05:05:34] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
+[27/Oct/2026 05:05:46] "GET /api/operator/dashboard/ HTTP/1.1" 200 1380
+[27/Oct/2026 05:05:46] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
+[27/Oct/2026 05:05:58] "GET /api/operator/dashboard/ HTTP/1.1" 200 1380
+[27/Oct/2026 05:05:58] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
+Performing system checks...
+
+System check identified no issues (0 silenced).
+October 27, 2026 - 04:51:27
+Django version 5.0.14, using settings 'agrirent.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CONTROL-C.
+
+[27/Oct/2026 05:06:10] "GET /api/operator/dashboard/ HTTP/1.1" 200 1380
+[27/Oct/2026 05:06:10] "GET /api/operator/nearby/?latitude=18.615598&longitude=73.738948 HTTP/1.1" 200 1127
+Performing system checks...
+
+System check identified no issues (0 silenced).
+October 27, 2026 - 05:06:09
+Django version 5.0.14, using settings 'agrirent.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CONTROL-C.
+
