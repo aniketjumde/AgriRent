@@ -3,6 +3,56 @@ from .recommendation import train_and_recommend
 from .price_predictor import predict_price, BASE_RATES
 
 # Response templates in Tamil, English, and Hindi
+
+# --- KNOWLEDGE BASE INTEGRATION (docs/chatbot_knowledge/) ---
+FAQ_RULES = [
+    # Escrow & Payments
+    {
+        "keywords": ["escrow", "safe", "payment", "money", "refund", "பணம்", "பாதுகாப்ப", "ரிபண்ட்", "भुगतान", "सुरक्षित", "रिफंड", "पैसे"],
+        "responses": {
+            "en": "AgriRent uses automated escrow protection. Your payment stays securely held in escrow until field operations are completed and verified by you. If a booking is cancelled or declined, funds are immediately marked as Refunded.",
+            "ta": "அக்ரிரென்ட் எஸ்க்ரோ (Escrow) பாதுகாப்பு முறைமையை பயன்படுத்துகிறது. உங்கள் பணம் வயல் வேலைகள் முடிந்து நீங்கள் சரிபார்க்கும் வரை பாதுகாப்பாக இருக்கும். முன்பதிவு ரத்து செய்யப்பட்டால் பணம் உடனடியாக திருப்பித் தரப்படும்.",
+            "hi": "एग्रीरेंट एस्क्रो सुरक्षा प्रणाली का उपयोग करता है। खेत का काम पूरा होने और आपके सत्यापन तक आपकी राशि सुरक्षित रहती है। बुकिंग रद्द होने पर तुरंत रिफंड मिलता है।"
+        }
+    },
+    # Driver / Operator Assistance
+    {
+        "keywords": ["operator", "driver", "driver chahiye", "driver venum", "ஓட்டுநர்", "டிரைவர்", "ड्राइवर", "ऑपरेटर"],
+        "responses": {
+            "en": "You can get a certified equipment operator! Simply check 'Requires Operator' when booking. Once the owner approves, our AI proximity dispatch automatically assigns a qualified nearby driver to collect the machine and drive to your field.",
+            "ta": "சான்றளிக்கப்பட்ட ஓட்டுநரை பெறலாம்! முன்பதிவின் போது 'Requires Operator' என்பதைத் தேர்ந்தெடுக்கவும். உரிமையாளர் ஒப்புதல் அளித்ததும் அருகிலுள்ள தகுதியான ஓட்டுநருக்கு பணி ஒதுக்கப்படும்.",
+            "hi": "आप प्रमाणित ऑपरेटर प्राप्त कर सकते हैं! बुकिंग के समय 'Requires Operator' चुनें। मालिक की मंजूरी के बाद निकटतम प्रमाणित ड्राइवर को काम सौंप दिया जाएगा।"
+        }
+    },
+    # Multi-party Chat / Messaging
+    {
+        "keywords": ["chat", "message", "contact owner", "talk", "செய்தி", "உரிமையாள", "संदेश", "बात", "चैट"],
+        "responses": {
+            "en": "To communicate, go to 'My Bookings' on your Dashboard and click the 'Chat' button. This opens the multi-party messaging window allowing Farmers, Equipment Owners, and Drivers to coordinate timing and field access.",
+            "ta": "தொடர்பு கொள்ள, உங்கள் டேஷ்போர்டில் 'My Bookings' சென்று 'Chat' பொத்தானை அழுத்தவும். இதன் மூலம் நீங்கள் உரிமையாளர் மற்றும் ஓட்டுநருடன் நேரடியாக பேசலாம்.",
+            "hi": "बातचीत करने के लिए डैशबोर्ड में 'My Bookings' पर जाएं और 'Chat' बटन पर क्लिक करें। इससे मैसेजिंग विंडो खुलेगी जहाँ आप मालिक और ड्राइवर से सीधे संपर्क कर सकते हैं।"
+        }
+    },
+    # Cancellation & Refund
+    {
+        "keywords": ["cancel", "cancellation", "ரத்து", "रद्द"],
+        "responses": {
+            "en": "You can cancel a booking while it is in 'Pending' or 'Approved' status by clicking 'Cancel Rent' in your Dashboard. Equipment availability is instantly unlocked and your payment is marked as Refunded.",
+            "ta": "முன்பதிவு 'Pending' அல்லது 'Approved' நிலையில் இருக்கும்போது 'Cancel Rent' கிளிக் செய்து ரத்து செய்யலாம். உங்கள் பணம் உடனடியாக திருப்பித் தரப்படும்.",
+            "hi": "बुकिंग 'Pending' या 'Approved' स्थिति में होने पर 'Cancel Rent' पर क्लिक करके रद्द कर सकते हैं। आपका पूरा भुगतान तुरंत रिफंड कर दिया जाएगा।"
+        }
+    },
+    # How to Book
+    {
+        "keywords": ["how to book", "book equipment", "reserve", "முன்பதிவு செய்வது எப்படி", "बुक कैसे करें", "बुकिंग"],
+        "responses": {
+            "en": "To book equipment: 1. Go to Machinery Discovery, 2. Choose your machine and radius, 3. Click 'View Details & Reserve' or use the AI Match Advisor, 4. Confirm your dates and click 'Review & Book' to place your reservation.",
+            "ta": "இயந்திரத்தை பதிவு செய்ய: 1. Machinery Discovery செல்லவும், 2. தேவையான இயந்திரத்தைத் தேர்வு செய்யவும், 3. 'View Details & Reserve' கிளிக் செய்து, 4. தேதிகளை உறுதிசெய்து 'Review & Book' அழுத்தவும்.",
+            "hi": "उपकरण बुक करने के लिए: 1. Machinery Discovery पर जाएं, 2. उपकरण और दायरा चुनें, 3. 'View Details & Reserve' पर क्लिक करें, 4. दिनांक पुष्टि करके 'Review & Book' दबाएं।"
+        }
+    }
+]
+
 RESPONSES = {
     "en": {
         "greeting": "Hello! I am AgriRent AI Assistant. How can I help you today?",
@@ -150,6 +200,11 @@ def query_assistant(user_message, active_listings_func=None):
         # Simulated fallback list if function is unavailable or no DB query
         simulated_equip = f"John Deere Tractor (₹750/hr), Sonalika Rotavator (₹900/hr) near {matched_loc}"
         return RESPONSES[lang]["search_result"].format(location=matched_loc, listings=simulated_equip)
+
+    # Check Knowledge Base FAQs
+    for rule in FAQ_RULES:
+        if any(k in msg_lower for k in rule["keywords"]):
+            return rule["responses"][lang]
 
     # Check for general greetings
     greetings = ["hi", "hello", "hey", "வணக்கம்", "नमस्ते", "namaste", "vanakkam"]
