@@ -1,82 +1,265 @@
-Exception in thread django-main-thread:
-Traceback (most recent call last):
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/backends/base/base.py", line 275, in ensure_connection
-    self.connect()
-    ~~~~~~~~~~~~^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/utils/asyncio.py", line 26, in inner
-    return func(*args, **kwargs)
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/backends/base/base.py", line 256, in connect
-    self.connection = self.get_new_connection(conn_params)
-                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/utils/asyncio.py", line 26, in inner
-    return func(*args, **kwargs)
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/backends/postgresql/base.py", line 277, in get_new_connection
-    connection = self.Database.connect(**conn_params)
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/psycopg2/__init__.py", line 122, in connect
-    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
-psycopg2.OperationalError: connection to server at "aws-0-ap-south-1.pooler.supabase.com" (65.0.195.55), port 6543 failed: FATAL:  (ENOTFOUND) tenant/user postgres.yourprojectref not found
-
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/usr/lib/python3.13/threading.py", line 1044, in _bootstrap_inner
-    self.run()
-    ~~~~~~~~^^
-  File "/usr/lib/python3.13/threading.py", line 995, in run
-    self._target(*self._args, **self._kwargs)
-    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/utils/autoreload.py", line 64, in wrapper
-    fn(*args, **kwargs)
-    ~~^^^^^^^^^^^^^^^^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/core/management/commands/runserver.py", line 136, in inner_run
-    self.check_migrations()
-    ~~~~~~~~~~~~~~~~~~~~~^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/core/management/base.py", line 581, in check_migrations
-    executor = MigrationExecutor(connections[DEFAULT_DB_ALIAS])
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/migrations/executor.py", line 18, in __init__
-    self.loader = MigrationLoader(self.connection)
-                  ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/migrations/loader.py", line 58, in __init__
-    self.build_graph()
-    ~~~~~~~~~~~~~~~~^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/migrations/loader.py", line 235, in build_graph
-    self.applied_migrations = recorder.applied_migrations()
-                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/migrations/recorder.py", line 89, in applied_migrations
-    if self.has_table():
-       ~~~~~~~~~~~~~~^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/migrations/recorder.py", line 63, in has_table
-    with self.connection.cursor() as cursor:
-         ~~~~~~~~~~~~~~~~~~~~~~^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/utils/asyncio.py", line 26, in inner
-    return func(*args, **kwargs)
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/backends/base/base.py", line 316, in cursor
-    return self._cursor()
-           ~~~~~~~~~~~~^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/backends/base/base.py", line 292, in _cursor
-    self.ensure_connection()
-    ~~~~~~~~~~~~~~~~~~~~~~^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/utils/asyncio.py", line 26, in inner
-    return func(*args, **kwargs)
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/backends/base/base.py", line 274, in ensure_connection
-    with self.wrap_database_errors:
-         ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/utils.py", line 91, in __exit__
-    raise dj_exc_value.with_traceback(traceback) from exc_value
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/backends/base/base.py", line 275, in ensure_connection
-    self.connect()
-    ~~~~~~~~~~~~^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/utils/asyncio.py", line 26, in inner
-    return func(*args, **kwargs)
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/backends/base/base.py", line 256, in connect
-    self.connection = self.get_new_connection(conn_params)
-                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/utils/asyncio.py", line 26, in inner
-    return func(*args, **kwargs)
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/backends/postgresql/base.py", line 277, in get_new_connection
-    connection = self.Database.connect(**conn_params)
-  File "/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/psycopg2/__init__.py", line 122, in connect
-    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
-django.db.utils.OperationalError: connection to server at "aws-0-ap-south-1.pooler.supabase.com" (65.0.195.55), port 6543 failed: FATAL:  (ENOTFOUND) tenant/user postgres.yourprojectref not found
-
+[27/Oct/2026 04:51:28] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:29] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:29,150] - Broken pipe from ('127.0.0.1', 50650)
+[27/Oct/2026 04:51:30] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:31] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:31,184] - Broken pipe from ('127.0.0.1', 50664)
+[27/Oct/2026 04:51:32] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:33] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:33,213] - Broken pipe from ('127.0.0.1', 50678)
+[27/Oct/2026 04:51:34] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:35] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:35,229] - Broken pipe from ('127.0.0.1', 50696)
+[27/Oct/2026 04:51:36] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:37] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:37,243] - Broken pipe from ('127.0.0.1', 50710)
+[27/Oct/2026 04:51:38] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:38,250] - Broken pipe from ('127.0.0.1', 34678)
+[27/Oct/2026 04:51:39] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:40] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:40,262] - Broken pipe from ('127.0.0.1', 34706)
+[27/Oct/2026 04:51:41] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:42] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:43] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:44] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:45] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:46] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:47] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:48] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:48,348] - Broken pipe from ('127.0.0.1', 41334)
+[27/Oct/2026 04:51:49] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:49,355] - Broken pipe from ('127.0.0.1', 41340)
+[27/Oct/2026 04:51:50] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:51] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:51,381] - Broken pipe from ('127.0.0.1', 41362)
+[27/Oct/2026 04:51:52] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:52,389] - Broken pipe from ('127.0.0.1', 41376)
+[27/Oct/2026 04:51:53] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:54] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:55] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:51:55,431] - Broken pipe from ('127.0.0.1', 41398)
+[27/Oct/2026 04:51:56] "GET / HTTP/1.1" 404 179
+[27/Oct/2026 04:52:13] "OPTIONS /api/equipment/ HTTP/1.1" 200 0
+[27/Oct/2026 04:52:14] "GET /api/equipment/ HTTP/1.1" 200 66255
+[27/Oct/2026 04:52:14] "GET /api/equipment/ HTTP/1.1" 200 66255
+[27/Oct/2026 04:52:18] "OPTIONS /api/auth/login/ HTTP/1.1" 200 0
+[27/Oct/2026 04:52:18] "POST /api/auth/login/ HTTP/1.1" 200 800
+[27/Oct/2026 04:52:18] "OPTIONS /api/weather/?lat=18.5912&lng=73.7389&location=Suresh+Patil+Farm%2C+Maan%2C+Hinjawadi%2C+Pune+%2814.5+Acres%2C+Sugarcane%2FPaddy%29 HTTP/1.1" 200 0
+[27/Oct/2026 04:52:18] "OPTIONS /api/equipment/nearby/?lat=18.5912&lng=73.7389&radius=25&category=&max_price=3000&availability=all&sort_by=distance HTTP/1.1" 200 0
+[27/Oct/2026 04:52:18] "OPTIONS /api/payments/history/ HTTP/1.1" 200 0
+[27/Oct/2026 04:52:18] "OPTIONS /api/dashboard/farmer/ HTTP/1.1" 200 0
+[27/Oct/2026 04:52:18] "GET /api/weather/?lat=18.5912&lng=73.7389&location=Suresh+Patil+Farm%2C+Maan%2C+Hinjawadi%2C+Pune+%2814.5+Acres%2C+Sugarcane%2FPaddy%29 HTTP/1.1" 200 1046
+[27/Oct/2026 04:52:18] "GET /api/payments/history/ HTTP/1.1" 200 2
+[27/Oct/2026 04:52:18] "GET /api/dashboard/farmer/ HTTP/1.1" 200 223
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.447814) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.447817) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.453277) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.453279) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.456552) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.456556) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.459335) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.459337) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.461437) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.461439) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.464962) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.464964) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.467047) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.467049) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.470641) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.470647) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.475651) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.475656) while time zone support is active.
+  warnings.warn(
+[27/Oct/2026 04:52:18] "GET /api/equipment/nearby/?lat=18.5912&lng=73.7389&radius=25&category=&max_price=3000&availability=all&sort_by=distance HTTP/1.1" 200 14238
+[27/Oct/2026 04:52:18] "GET /api/weather/?lat=18.5912&lng=73.7389&location=Suresh+Patil+Farm%2C+Maan%2C+Hinjawadi%2C+Pune+%2814.5+Acres%2C+Sugarcane%2FPaddy%29 HTTP/1.1" 200 1046
+[27/Oct/2026 04:52:18] "GET /api/payments/history/ HTTP/1.1" 200 2
+[27/Oct/2026 04:52:18] "GET /api/dashboard/farmer/ HTTP/1.1" 200 223
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.536878) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.536882) while time zone support is active.
+  warnings.warn(
+[27/Oct/2026 04:52:18] "OPTIONS /api/notifications/ HTTP/1.1" 200 0
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.541570) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.541574) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.545589) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.545592) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.548192) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.548195) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.550349) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.550351) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.552472) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.552474) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.554733) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.554735) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.557119) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.557121) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:52:18.559493) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:52:18.559498) while time zone support is active.
+  warnings.warn(
+[27/Oct/2026 04:52:18] "GET /api/equipment/nearby/?lat=18.5912&lng=73.7389&radius=25&category=&max_price=3000&availability=all&sort_by=distance HTTP/1.1" 200 14238
+[27/Oct/2026 04:52:18] "GET /api/notifications/ HTTP/1.1" 200 2
+[27/Oct/2026 04:52:18] "GET /api/notifications/ HTTP/1.1" 200 2
+[27/Oct/2026 04:52:18] "GET /api/equipment/ HTTP/1.1" 200 66255
+[27/Oct/2026 04:52:18] "OPTIONS /api/bookings/ HTTP/1.1" 200 0
+[27/Oct/2026 04:52:18] "GET /api/equipment/ HTTP/1.1" 200 66255
+[27/Oct/2026 04:52:18] "OPTIONS /api/bookings/ HTTP/1.1" 200 0
+[27/Oct/2026 04:52:18] "GET /api/bookings/ HTTP/1.1" 200 2
+[27/Oct/2026 04:52:18] "GET /api/weather/?lat=18.5912&lng=73.7389&location=Suresh+Patil+Farm%2C+Maan%2C+Hinjawadi%2C+Pune+%2814.5+Acres%2C+Sugarcane%2FPaddy%29 HTTP/1.1" 200 1046
+[27/Oct/2026 04:52:18] "GET /api/bookings/ HTTP/1.1" 200 2
+[27/Oct/2026 04:52:18] "GET /api/weather/?lat=18.5912&lng=73.7389&location=Suresh+Patil+Farm%2C+Maan%2C+Hinjawadi%2C+Pune+%2814.5+Acres%2C+Sugarcane%2FPaddy%29 HTTP/1.1" 200 1046
+[27/Oct/2026 04:52:18] "OPTIONS /api/govt-schemes/ HTTP/1.1" 200 0
+[27/Oct/2026 04:52:18] "OPTIONS /api/govt-schemes/ HTTP/1.1" 200 0
+[27/Oct/2026 04:52:18] "GET /api/govt-schemes/ HTTP/1.1" 200 820
+[27/Oct/2026 04:52:18] "GET /api/govt-schemes/ HTTP/1.1" 200 820
+[27/Oct/2026 04:52:52] "OPTIONS /api/auth/me/ HTTP/1.1" 200 0
+[27/Oct/2026 04:52:52] "GET /api/auth/me/ HTTP/1.1" 401 172
+[27/Oct/2026 04:52:53] "GET /api/auth/me/ HTTP/1.1" 401 172
+[27/Oct/2026 04:52:53] "OPTIONS /api/auth/logout/ HTTP/1.1" 200 0
+[27/Oct/2026 04:52:53] "POST /api/auth/logout/ HTTP/1.1" 401 172
+[27/Oct/2026 04:52:53] "OPTIONS /api/equipment/ HTTP/1.1" 200 0
+[27/Oct/2026 04:52:53] "OPTIONS /api/equipment/ HTTP/1.1" 200 0
+[27/Oct/2026 04:52:53] "GET /api/equipment/ HTTP/1.1" 401 172
+[27/Oct/2026 04:52:53] "GET /api/equipment/ HTTP/1.1" 401 172
+[27/Oct/2026 04:52:53] "POST /api/auth/logout/ HTTP/1.1" 401 172
+[27/Oct/2026 04:52:53] "OPTIONS /api/auth/refresh/ HTTP/1.1" 200 0
+[27/Oct/2026 04:52:53] "POST /api/auth/refresh/ HTTP/1.1" 200 494
+[27/Oct/2026 04:52:53] "GET /api/equipment/ HTTP/1.1" 200 66255
+[27/Oct/2026 04:53:01] "OPTIONS /api/auth/login/ HTTP/1.1" 200 0
+[27/Oct/2026 04:53:01] "POST /api/auth/login/ HTTP/1.1" 401 47
+[27/Oct/2026 04:53:03] "POST /api/auth/login/ HTTP/1.1" 200 800
+[27/Oct/2026 04:53:03] "OPTIONS /api/weather/?lat=18.5912&lng=73.7389&location=Suresh+Patil+Farm%2C+Maan%2C+Hinjawadi%2C+Pune+%2814.5+Acres%2C+Sugarcane%2FPaddy%29 HTTP/1.1" 200 0
+[27/Oct/2026 04:53:03] "OPTIONS /api/equipment/nearby/?lat=18.5912&lng=73.7389&radius=25&category=&max_price=3000&availability=all&sort_by=distance HTTP/1.1" 200 0
+[27/Oct/2026 04:53:03] "OPTIONS /api/payments/history/ HTTP/1.1" 200 0
+[27/Oct/2026 04:53:03] "OPTIONS /api/dashboard/farmer/ HTTP/1.1" 200 0
+[27/Oct/2026 04:53:03] "GET /api/weather/?lat=18.5912&lng=73.7389&location=Suresh+Patil+Farm%2C+Maan%2C+Hinjawadi%2C+Pune+%2814.5+Acres%2C+Sugarcane%2FPaddy%29 HTTP/1.1" 200 1046
+[27/Oct/2026 04:53:03] "GET /api/payments/history/ HTTP/1.1" 200 2
+[27/Oct/2026 04:53:03] "GET /api/dashboard/farmer/ HTTP/1.1" 200 223
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.481653) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.481658) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.488396) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.488405) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.494473) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.494482) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.502034) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.502036) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.506435) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.506438) while time zone support is active.
+  warnings.warn(
+[27/Oct/2026 04:53:03] "GET /api/weather/?lat=18.5912&lng=73.7389&location=Suresh+Patil+Farm%2C+Maan%2C+Hinjawadi%2C+Pune+%2814.5+Acres%2C+Sugarcane%2FPaddy%29 HTTP/1.1" 200 1046
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.512795) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.512799) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.518440) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.518443) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.522895) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.522896) while time zone support is active.
+  warnings.warn(
+[27/Oct/2026 04:53:03] "OPTIONS /api/notifications/ HTTP/1.1" 200 0
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.529652) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.529658) while time zone support is active.
+  warnings.warn(
+[27/Oct/2026 04:53:03] "GET /api/payments/history/ HTTP/1.1" 200 2
+[27/Oct/2026 04:53:03] "GET /api/equipment/nearby/?lat=18.5912&lng=73.7389&radius=25&category=&max_price=3000&availability=all&sort_by=distance HTTP/1.1" 200 14238
+[27/Oct/2026 04:53:03] "GET /api/dashboard/farmer/ HTTP/1.1" 200 223
+[27/Oct/2026 04:53:03] "GET /api/notifications/ HTTP/1.1" 200 2
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.594591) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.594594) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.598505) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.598507) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.601190) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.601193) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.608018) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.608020) while time zone support is active.
+  warnings.warn(
+[27/Oct/2026 04:53:03] "GET /api/notifications/ HTTP/1.1" 200 2
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.624907) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.624909) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.628642) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.628645) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.632776) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.632785) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.636528) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.636531) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.end_date received a naive datetime (2026-10-27 04:53:03.642128) while time zone support is active.
+  warnings.warn(
+/home/aniket/Documents/Programming_Languages/AgriRent/agrirent/.venv/lib/python3.13/site-packages/django/db/models/fields/__init__.py:1655: RuntimeWarning: DateTimeField Booking.start_date received a naive datetime (2026-10-27 04:53:03.642130) while time zone support is active.
+  warnings.warn(
+[27/Oct/2026 04:53:03] "GET /api/equipment/nearby/?lat=18.5912&lng=73.7389&radius=25&category=&max_price=3000&availability=all&sort_by=distance HTTP/1.1" 200 14238
+[27/Oct/2026 04:53:03] "GET /api/equipment/ HTTP/1.1" 200 66255
+[27/Oct/2026 04:53:03] "OPTIONS /api/bookings/ HTTP/1.1" 200 0
+[27/Oct/2026 04:53:03] "GET /api/equipment/ HTTP/1.1" 200 66255
+[27/Oct/2026 04:53:03] "GET /api/bookings/ HTTP/1.1" 200 2
+[27/Oct/2026 04:53:03] "GET /api/weather/?lat=18.5912&lng=73.7389&location=Suresh+Patil+Farm%2C+Maan%2C+Hinjawadi%2C+Pune+%2814.5+Acres%2C+Sugarcane%2FPaddy%29 HTTP/1.1" 200 1046
+[27/Oct/2026 04:53:03] "GET /api/bookings/ HTTP/1.1" 200 2
+[27/Oct/2026 04:53:03] "OPTIONS /api/govt-schemes/ HTTP/1.1" 200 0
+[27/Oct/2026 04:53:03] "GET /api/weather/?lat=18.5912&lng=73.7389&location=Suresh+Patil+Farm%2C+Maan%2C+Hinjawadi%2C+Pune+%2814.5+Acres%2C+Sugarcane%2FPaddy%29 HTTP/1.1" 200 1046
+[27/Oct/2026 04:53:03] "GET /api/govt-schemes/ HTTP/1.1" 200 820
+[27/Oct/2026 04:53:03] "GET /api/govt-schemes/ HTTP/1.1" 200 820
+[27/Oct/2026 04:53:12] "OPTIONS /api/ai/chat/ HTTP/1.1" 200 0
+[27/Oct/2026 04:53:12] "POST /api/ai/chat/ HTTP/1.1" 200 72
+[27/Oct/2026 04:53:16] "POST /api/ai/chat/ HTTP/1.1" 200 150
+[27/Oct/2026 04:53:17] "POST /api/ai/chat/ HTTP/1.1" 200 244
+[27/Oct/2026 04:53:19] "POST /api/ai/chat/ HTTP/1.1" 200 138
+[27/Oct/2026 04:53:34] "POST /api/ai/chat/ HTTP/1.1" 200 207
+[27/Oct/2026 04:53:50] "POST /api/ai/chat/ HTTP/1.1" 200 138

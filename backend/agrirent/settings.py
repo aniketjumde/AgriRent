@@ -76,13 +76,28 @@ DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
 DB_HOST = os.environ.get('DB_HOST', '')
 DB_PORT = os.environ.get('DB_PORT', '')
 
-if DATABASE_URL:
+
+def is_placeholder_database_url(url):
+    if not url:
+        return True
+    lower = url.lower()
+    placeholders = (
+        'yourprojectref',
+        'your-db-password',
+        'replace-with-a-cryptographically',
+        'postgres.yourprojectref',
+        'supabase.com',
+    )
+    return any(item in lower for item in placeholders)
+
+
+if DATABASE_URL and not is_placeholder_database_url(DATABASE_URL):
     parsed_db = urllib.parse.urlparse(DATABASE_URL)
     query_params = urllib.parse.parse_qs(parsed_db.query)
     ssl_mode = os.environ.get(
         'DB_SSLMODE',
         query_params.get('sslmode', ['prefer'])[0]
-    )    
+    )
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -97,7 +112,7 @@ if DATABASE_URL:
             'CONN_MAX_AGE': int(os.environ.get('CONN_MAX_AGE', 600)),
         }
     }
-elif DB_NAME and DB_USER:
+elif DB_NAME and DB_USER and not is_placeholder_database_url(DB_NAME):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -105,7 +120,7 @@ elif DB_NAME and DB_USER:
             'USER': DB_USER,
             'PASSWORD': DB_PASSWORD,
             'HOST': DB_HOST,
-            'PORT': DB_PORT or '5432',            
+            'PORT': DB_PORT or '5432',
             'OPTIONS': {
                 'sslmode': os.environ.get('DB_SSLMODE', 'prefer'),
             },
